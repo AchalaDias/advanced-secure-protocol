@@ -1,13 +1,12 @@
-# server/protocol/handler.py
-
 import json
 from db.user_model import register_user, authenticate_user
 
-def process_message(raw_data):
+
+def process_message(raw_data, conn=None):
     try:
         data = json.loads(raw_data)
     except json.JSONDecodeError:
-        return json.dumps({"status": "ERROR", "message": "Invalid JSON"})
+        return {"status": "ERROR", "message": "Invalid JSON"}, None, None
 
     msg_type = data.get("type")
     username = data.get("username")
@@ -15,13 +14,15 @@ def process_message(raw_data):
 
     if msg_type == "REGISTER":
         if not username or not password:
-            return json.dumps({"status": "ERROR", "message": "Missing credentials"})
-        return json.dumps(register_user(username, password))
+            return {"status": "ERROR", "message": "Missing credentials"}, None, None
+        result = register_user(username, password)
+        return result, result.get("uuid"), username
 
     elif msg_type == "LOGIN":
         if not username or not password:
-            return json.dumps({"status": "ERROR", "message": "Missing credentials"})
-        return json.dumps(authenticate_user(username, password))
+            return {"status": "ERROR", "message": "Missing credentials"}, None, None
+        result = authenticate_user(username, password)
+        return result, result.get("uuid"), username
 
-    else:
-        return json.dumps({"status": "ERROR", "message": "Unknown command"})
+    return {"status": "ERROR", "message": "Unknown command"}, None, None
+
