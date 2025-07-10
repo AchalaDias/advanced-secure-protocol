@@ -11,15 +11,22 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  # chat-server:
-  #   build: ./server
-  #   depends_on:
-  #     - mysql
-  #   ports:
-  #     - "5000:5000"
-  #   volumes:
-  #     - ./server:/app
+  chat-server:
+    build: ./server
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./server:/app
+    working_dir: /app
 
 volumes:
   mysql_data:

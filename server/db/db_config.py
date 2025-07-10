@@ -1,5 +1,5 @@
 DB_CONFIG = {
-    'host': '127.0.0.1',
+    'host': 'mysql',
     'user': 'root',
     'password': 'rootpass',
     'database': 'chatapp'
