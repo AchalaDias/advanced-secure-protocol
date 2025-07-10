@@ -1,6 +1,9 @@
 import json, base64
 from protocol.handler import process_message, extract_incoming_message
 from protocol.session_manager import register_session, remove_session, get_session, get_all_sessions, get_session_by_socket
+from db.group_model import create_group, add_user_to_group, get_groups_by_user, get_group_members
+from db.user_model import user_exists
+
 from protocol.crypto import (
     generate_rsa_key_pair,
     serialize_public_key,
@@ -45,33 +48,7 @@ def handle_client_connection(connstream, addr):
         data = connstream.recv(2048).decode()
         if not data:
             return
-        msg = extract_incoming_message(data, connstream, aes_key)
-        # try:
-        #     raw = json.loads(data)            
-        # except json.JSONDecodeError:
-        #     connstream.sendall(json.dumps({
-        #         "type": "error",
-        #         "message": "Invalid JSON"
-        #     }).encode())
-        #     return
-
-        # # Decrypt secure payload
-        # if raw.get("type") == "secure":
-        #     try:
-        #         msg = decrypt_message(raw, aes_key)
-        #     except Exception as e:
-        #         connstream.sendall(json.dumps({
-        #             "type": "error",
-        #             "message": f"Decryption failed: {str(e)}"
-        #         }).encode())
-        #         return
-        # else:
-        #     msg = raw  # fallback for plain message
-            
-            
-            
-            
-            
+        msg = extract_incoming_message(data, connstream, aes_key)     
     
         response_data, user_uuid, username = process_message(msg, connstream)
         if user_uuid:
@@ -81,32 +58,11 @@ def handle_client_connection(connstream, addr):
 
         # Loop for messages or commands
         while True:
-            data = connstream.recv(2048).decode()
+            data = connstream.recv(10 * 1024 * 1024).decode()
             if not data:
                 break
             
             msg = extract_incoming_message(data, connstream, aes_key)
-            # try:
-            #     raw = json.loads(data)
-            # except json.JSONDecodeError:
-            #     connstream.sendall(json.dumps({
-            #         "type": "error",
-            #         "message": "Invalid JSON"
-            #     }).encode())
-            #     return
-
-            # # Decrypt secure payload
-            # if raw.get("type") == "secure":
-            #     try:
-            #         msg = decrypt_message(raw, aes_key)
-            #     except Exception as e:
-            #         connstream.sendall(json.dumps({
-            #             "type": "error",
-            #             "message": f"Decryption failed: {str(e)}"
-            #         }).encode())
-            #         return
-            # else:
-            #     msg = raw  # fallback for plain message
                 
             try:
                 # Validate session
@@ -117,8 +73,9 @@ def handle_client_connection(connstream, addr):
                         "message": "Unauthorized connection"
                     }).encode())
                     break
-                
-                if msg.get("type") == "message":
+             
+# =================================== User to User Messaging ====================================================  
+                if msg.get("type") == "message" and msg.get("to_type") == "user":
                     target_uuid = msg.get("to")
                     target_session = get_session(target_uuid)
                     target_aes_key = target_session["aes_key"]
@@ -142,6 +99,28 @@ def handle_client_connection(connstream, addr):
                             "status": "offline",
                             "message": f"User {target_uuid} is offline or Invalid"
                         }).encode())
+                
+                #  Broadcast Message to Group Members 
+                elif msg.get("type") == "message" and msg.get("to_type") == "group":
+                    from_uuid, from_session = get_session_by_socket(connstream)
+                    group_id = msg.get("to")
+                    msg["from"] =  from_session["username"]
+                    # Lookup group members
+                    members = get_group_members(group_id)
+                    
+                    for member_uuid in members:
+                        if member_uuid == from_uuid:
+                            continue  # Skip sender
+                        
+                        recipient_session = get_session(member_uuid)
+                        if recipient_session:
+                            encrypted = encrypt_message(msg, recipient_session["aes_key"])
+                            try:
+                                recipient_session["conn"].sendall(json.dumps(encrypted).encode())
+                            except Exception as e:
+                                print(f"[!] Error sending to {member_uuid}: {e}")
+                
+                
                         
                 elif msg.get("type") == "get_online_users":
                     # Need to hid the requested user's data                    
@@ -161,6 +140,67 @@ def handle_client_connection(connstream, addr):
                         "online_users": online_users
                     }
                     connstream.sendall(json.dumps(response).encode())
+# ========================================================================================================
+
+# =================================== Group Messaging ====================================================     
+                
+                elif msg.get("type") == "create_group":
+                    group_name = msg.get("group_name")
+
+                    # Validate
+                    if not group_name:
+                        response = { "type": "error", "message": "Missing group_name" }
+                    else:
+                        try:
+                            group_id = create_group(group_name)
+                            add_user_to_group(group_id, user_uuid)  # add creator to group
+                            response = { "type": "create_group_response", "status": "OK" }
+                        except Exception as e:
+                            response = { "type": "error", "message": str(e) }
+
+                    connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
+
+                elif msg.get("type") == "list_my_groups":
+                    groups = get_groups_by_user(user_uuid)
+                    response = {
+                        "type": "list_my_groups",
+                        "groups": groups
+                    }
+                    connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())    
+                        
+                elif msg.get("type") == "add_user_to_group":
+                    group_id = msg.get("group_id")
+                    target_uuid = msg.get("user_id")
+
+                    if not group_id or not target_uuid:
+                        response = { "type": "error", "message": "Missing group_id or user_id" }
+                        
+                    # Validate user ID
+                    elif not user_exists(target_uuid):
+                        response = { "type": "error", "message": "User UUID not found" }  
+                    # else:
+                    #     pass
+                    else:
+                        try:
+                            add_user_to_group(group_id, target_uuid)
+                            response = {
+                                "type": "add_user_to_group",
+                                "status": "OK",
+                                "group_id": group_id,
+                                "added": target_uuid
+                            }
+                        except Exception as e:
+                            response = {
+                                "type": "error",
+                                "message": f"Failed to add user to group: {str(e)}"
+                            }
+                    connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
+                
+                
+# =======================================================================================================
+                
+                
+                
                 else:
                     connstream.sendall(json.dumps({
                         "type": "error",

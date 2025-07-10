@@ -24,6 +24,22 @@ def init_db():
             last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
     """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS `groups` (
+            group_id INT AUTO_INCREMENT PRIMARY KEY,
+            group_name VARCHAR(255)
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS `group_members` (
+            group_id INT,
+            user_uuid VARCHAR(64),
+            PRIMARY KEY (group_id, user_uuid),
+            FOREIGN KEY (group_id) REFERENCES `groups`(group_id)
+        )
+    """)
 
     conn.commit()
     conn.close()

@@ -1,6 +1,7 @@
 import json
 from db.user_model import register_user, authenticate_user
 from protocol.crypto import decrypt_message
+from db.group_model import create_group, add_user_to_group, get_groups_by_user
 
 def process_message(data, conn=None):
     msg_type = data.get("type")

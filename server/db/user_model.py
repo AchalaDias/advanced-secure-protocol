@@ -48,3 +48,13 @@ def authenticate_user(username, password):
                 "username": username
             }
     return {"status": "ERROR", "message": "Invalid credentials"}
+
+
+def user_exists(user_uuid):
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM users WHERE uuid = %s", (user_uuid,))
+    exists = cur.fetchone() is not None
+    cur.close()
+    conn.close()
+    return exists
