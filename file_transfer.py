@@ -13,9 +13,6 @@ SERVER_HOST = 'localhost'
 SERVER_PORT = 5001
 aes_key = None
 
-# CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-# CERT_FILE = os.path.join(CURRENT_DIR, "server", "keys", "cert.pem")
-
 def recv_messages(sock):
     global aes_key
     while True:
@@ -33,10 +30,11 @@ def recv_messages(sock):
                 msg = json.loads(plaintext.decode())
 
             if msg.get("payload_type") == "file":
-                filename = f"received_{datetime.utcnow().strftime('%H%M%S')}.bin"
+                original_filename = msg.get("filename", "received_file.bin")
+                filename = f"recv_{datetime.utcnow().strftime('%H%M%S')}_{original_filename}"
                 with open(filename, "wb") as f:
                     f.write(base64.b64decode(msg["payload"]))
-                print(f"\n📁 File received and saved as {filename}")
+                print(f"\nFile received and saved as {filename}")
             else:
                 print(f"\n[INCOMING] {msg}")
         except Exception as e:
@@ -111,6 +109,7 @@ def start_client():
                     continue
 
                 file_size = os.path.getsize(file_path)
+                filename = os.path.basename(file_path)
                 if file_size > 10 * 1024 * 1024:
                     print("[!] File exceeds 10MB limit. Aborted.")
                     continue
@@ -124,6 +123,7 @@ def start_client():
                     "to": to_id,
                     "to_type": to_type,
                     "payload": encoded,
+                    "filename": filename,
                     "payload_type": "file",
                     "timestamp": datetime.utcnow().isoformat() + "Z"
                 }
