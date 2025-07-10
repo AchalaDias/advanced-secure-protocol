@@ -1,5 +1,5 @@
 import json, base64
-from protocol.handler import process_message, extract_incoming_message
+from protocol.handler import process_message, extract_incoming_message, user_to_user_message
 from protocol.session_manager import register_session, remove_session, get_session, get_all_sessions, get_session_by_socket
 from db.group_model import create_group, add_user_to_group, get_groups_by_user, get_group_members
 from db.user_model import user_exists
@@ -76,29 +76,7 @@ def handle_client_connection(connstream, addr):
              
 # =================================== User to User Messaging ====================================================  
                 if msg.get("type") == "message" and msg.get("to_type") == "user":
-                    target_uuid = msg.get("to")
-                    target_session = get_session(target_uuid)
-                    target_aes_key = target_session["aes_key"]
-                    
-                    # Avoid sending messaged to same session
-                    if user_uuid == target_uuid:
-                        break
-
-                    if target_session:
-                        target_conn = target_session["conn"]
-                        msg['from'] = session["username"]
-                        message_to = f"{msg['to']} - {target_session['username']}"
-                        del msg['to']
-      
-                        forward_msg = encrypt_message(msg, target_aes_key) 
-                        target_conn.sendall(json.dumps(forward_msg).encode())
-                        print(f"[ROUTE] Message from {msg['from']} to {message_to} routed")
-                    else:
-                        connstream.sendall(json.dumps({
-                            "type": "delivery_status",
-                            "status": "offline",
-                            "message": f"User {target_uuid} is offline or Invalid"
-                        }).encode())
+                    user_to_user_message(msg, connstream, user_uuid, session)
                 
                 #  Broadcast Message to Group Members 
                 elif msg.get("type") == "message" and msg.get("to_type") == "group":
