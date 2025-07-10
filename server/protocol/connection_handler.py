@@ -198,9 +198,58 @@ def handle_client_connection(connstream, addr):
                 
                 
 # =======================================================================================================
-                
-                
-                
+
+# =================================== File Transfering ====================================================            
+                elif msg.get("type") in ["message_file", "group_file"]:
+                    from_uuid, from_session = get_session_by_socket(connstream)
+                    msg["from"] =  from_session["username"]
+                    file_data = base64.b64decode(msg["payload"])
+                    to = msg.get("to")
+                    to_type = msg.get("to_type")
+
+                    # File size limit
+                    if len(file_data) > 10 * 1024 * 1024:
+                        response = {
+                            "type": "error",
+                            "message": "File exceeds 10MB limit"
+                        }
+                        connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
+                        return
+
+                    delivered = []
+
+                    if msg.get("type") == "message_file" and to_type == "user":
+                        session = get_session(to)
+                        if session:
+                            try:
+                                session["conn"].sendall(json.dumps(encrypt_message(msg, session["aes_key"])).encode())
+                                delivered.append(to)
+                            except:
+                                print(f"[!] Error delivering file to {to}")
+
+                    elif msg.get("type") == "group_file" and to_type == "group":
+                        members = get_group_members(to)
+                        for member_uuid in members:
+                            if member_uuid == from_uuid:
+                                continue
+                            session = get_session(member_uuid)
+                            if session:
+                                try:
+                                    session["conn"].sendall(json.dumps(encrypt_message(msg, session["aes_key"])).encode())
+                                    delivered.append(member_uuid)
+                                except:
+                                    print(f"[!] Failed to send to {member_uuid}")
+
+                    response = {
+                        "type": "file_send_status",
+                        "status": "OK",
+                        "delivered": delivered,
+                        "to": to,
+                        "to_type": to_type
+                    }
+                    connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
+       
+# =======================================================================================================        
                 else:
                     connstream.sendall(json.dumps({
                         "type": "error",

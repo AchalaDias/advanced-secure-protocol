@@ -33,3 +33,5 @@ htmlcov/
 
 # Pytest
 .pytest_cache/
+
+tt.text
