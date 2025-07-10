@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN pip install mysql-connector-python bcrypt
+RUN pip install mysql-connector-python bcrypt cryptography
 
 CMD ["python", "server.py"]

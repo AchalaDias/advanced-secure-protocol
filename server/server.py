@@ -1,5 +1,3 @@
-# server/server.py
-
 import socket
 import ssl
 import threading

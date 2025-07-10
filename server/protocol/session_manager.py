@@ -31,13 +31,14 @@ def release_ip(user_uuid):
         ip_pool.discard(ip)
 
 
-def register_session(user_uuid, username, conn):
+def register_session(user_uuid, username, conn, aes_key):
     """Track a user's active session and assign an IP."""
     ip = assign_ip(user_uuid)
     active_sessions[user_uuid] = {
         "conn": conn,
         "ip": ip,
         "username": username,
+        "aes_key": aes_key,
         "connected_at": time.time()
     }
     return ip
