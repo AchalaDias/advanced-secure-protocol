@@ -1,4 +1,4 @@
-import json, base64
+import json, base64, re
 from datetime import datetime
 from protocol.logger import get_logger
 from db.user_model import register_user, authenticate_user, user_exists
@@ -28,6 +28,20 @@ def user_authentication(data):
     if msg_type == "REGISTER":
         if not username or not password:
             return {"status": "ERROR", "message": "Missing credentials"}, None, None
+        
+        # Password strength validation
+        if (
+            len(password) < 8 or
+            not re.search(r"[A-Z]", password) or
+            not re.search(r"[a-z]", password) or
+            not re.search(r"[0-9]", password) or
+            not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password)
+        ):
+            return {
+                "status": "ERROR",
+                "message": "Weak password. Must be at least 8 characters and include uppercase, lowercase, digit, and special character."
+            }, None, None
+
         result = register_user(username, password)
         return result, result.get("uuid"), username
 
