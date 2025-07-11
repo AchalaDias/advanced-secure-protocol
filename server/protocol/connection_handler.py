@@ -104,7 +104,7 @@ def handle_client_connection(connstream, addr):
                 
                 # Fetch online users list
                 elif msg.get("type") == "get_online_users":
-                    get_online_users(user_uuid, session, connstream)
+                    get_online_users(msg, user_uuid, session, connstream)
                 # ====================================================================
 
                 # ======================= Group Messaging ============================     
