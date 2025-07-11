@@ -36,7 +36,7 @@ cd advanced-secure-protocol
 docker-compose up --build
 ```
 # Project Structure
-
+```
 advanced-secure-protocol/
 │
 ├── server/
@@ -50,7 +50,7 @@ advanced-secure-protocol/
 │
 ├── docker-compose.yml       # Docker Compose configuration
 └── README.md
-
+```
 # 🧪 Testing
 
 You can run test client scripts or custom test scripts from the client/ directory.
