@@ -75,3 +75,22 @@ def get_groups_by_user(user_uuid):
     cur.close()
     conn.close()
     return groups
+
+def get_group_name_by_id(group_id):
+    """
+    Retrieves the name of a group given its group ID.
+
+    Args:
+        group_id (int): The ID of the group.
+
+    Returns:
+        str or None: The name of the group, or None if not found.
+    """
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cur = conn.cursor()
+    cur.execute("SELECT group_name FROM `groups` WHERE group_id = %s", (group_id,))
+    result = cur.fetchone()
+    cur.close()
+    conn.close()
+    return result[0] if result else None
+

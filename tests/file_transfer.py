@@ -34,6 +34,7 @@ def recv_messages(sock):
                 filename = f"recv_{datetime.utcnow().strftime('%H%M%S')}_{original_filename}"
                 with open(filename, "wb") as f:
                     f.write(base64.b64decode(msg["payload"]))
+                print(f"\n[INCOMING] {msg}")
                 print(f"\nFile received and saved as {filename}")
             else:
                 print(f"\n[INCOMING] {msg}")

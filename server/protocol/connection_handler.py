@@ -14,7 +14,7 @@ from protocol.handler import (
     user_to_user_message, 
     user_to_group_message, 
     get_online_users, 
-    create_group_message,
+    create_new_group,
     add_user_to_message_group,
     broadcast_online_users,
     broadcast_offline_users,
@@ -69,6 +69,10 @@ def handle_client_connection(connstream, addr):
             logger.info(f"User {username} ({user_uuid}) is online")
             
         connstream.sendall(json.dumps(response_data).encode())
+        
+        user_uuid, session = get_session_by_socket(connstream)
+        # Inform other users or peer servers about the new user
+        broadcast_online_users(user_uuid, session)
 
         # Loop for messages or commands
         while True:
@@ -80,7 +84,7 @@ def handle_client_connection(connstream, addr):
                 
             try:
                 # Validate session
-                user_uuid, session = get_session_by_socket(connstream)
+                
                 if not session:
                     logger.warning(f"Unauthorized connection {user_uuid}")
                     connstream.sendall(json.dumps({
@@ -89,8 +93,6 @@ def handle_client_connection(connstream, addr):
                     }).encode())
                     break
                 
-                # Inform other users or peer servers about the new user
-                broadcast_online_users(user_uuid, session)
                 # ====================== User to User Messaging =====================
                 # Passing message between users (Private messages)
                 if msg.get("type") == "message" and msg.get("to_type") == "user":
@@ -108,7 +110,7 @@ def handle_client_connection(connstream, addr):
                 # ======================= Group Messaging ============================     
                 # Create message groups
                 elif msg.get("type") == "create_group":
-                    create_group_message(msg, user_uuid, connstream, aes_key)
+                    create_new_group(msg, user_uuid, connstream, aes_key)
                     
                 # List all users groups 
                 elif msg.get("type") == "list_my_groups":

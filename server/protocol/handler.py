@@ -3,7 +3,7 @@ from datetime import datetime
 from protocol.logger import get_logger
 from db.user_model import register_user, authenticate_user, user_exists
 from protocol.crypto import decrypt_message, encrypt_message
-from db.group_model import get_group_members, add_user_to_group, create_group
+from db.group_model import get_group_members, add_user_to_group, create_group, get_group_name_by_id
 from protocol.session_manager import get_session, get_all_sessions
 
 logger = get_logger()
@@ -117,9 +117,17 @@ def user_to_user_message(msg, connstream, user_uuid, session):
         target_conn = target_session["conn"]
         msg['from'] = session["username"]
         message_to = f"{msg['to']} - {target_session['username']}"
-        del msg['to']
-      
-        forward_msg = encrypt_message(msg, target_aes_key) 
+        
+        message = {
+            "type": "message",
+            "from": session["username"],
+            "to": target_session['username'],
+            "to_type": "user",  
+            "payload": msg['payload'], 
+            "payload_type": "text", 
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        forward_msg = encrypt_message(message, target_aes_key) 
         target_conn.sendall(json.dumps(forward_msg).encode())
         logger.info(f"[ROUTE] Message from {msg['from']} to {message_to} routed")
     else:
@@ -155,10 +163,20 @@ def user_to_group_message(msg, user_uuid, session):
         
         recipient_session = get_session(member_uuid)
         if recipient_session:
-            encrypted = encrypt_message(msg, recipient_session["aes_key"])
+            group_name = get_group_name_by_id(group_id)
+            message = {
+                "type": "group_message",
+                "from": session["username"],
+                "to": group_name,
+                "to_type": "group",  
+                "payload": msg['payload'], 
+                "payload_type": "text", 
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+            encrypted = encrypt_message(message, recipient_session["aes_key"])
             try:
                 recipient_session["conn"].sendall(json.dumps(encrypted).encode())
-                logger.info(f"Broadcasting message user: {msg['from']} -> group ID({group_id})")
+                logger.info(f"Broadcasting message user: {message['from']} -> group ID({group_id})")
             except Exception as e:
                 logger.error(f"Error sending to {member_uuid}: {e}")               
                      
@@ -192,7 +210,7 @@ def get_online_users(user_uuid, session, connstream):
     }
     connstream.sendall(json.dumps(response).encode())
     
-def create_group_message(msg, user_uuid, connstream, aes_key):
+def create_new_group(msg, user_uuid, connstream, aes_key):
     """
     Handles the creation of a new group and adds the creator to it.
 
@@ -299,10 +317,19 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
     delivered = []
 
     if msg.get("type") == "message_file" and to_type == "user":
-        session = get_session(to)
-        if session:
+        target_session = get_session(to)
+        if target_session:
             try:
-                session["conn"].sendall(json.dumps(encrypt_message(msg, session["aes_key"])).encode())
+                message = {
+                    "type": "message_file",
+                    "from": session["username"],
+                    "to": target_session['username'],
+                    "to_type": "user",  
+                    "payload": msg['payload'], 
+                    "payload_type": "file", 
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                }
+                target_session["conn"].sendall(json.dumps(encrypt_message(message, target_session["aes_key"])).encode())
                 delivered.append(to)
             except:
                 logger.error(f"Error delivering file to {to}")
@@ -312,10 +339,21 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
         for member_uuid in members:
             if member_uuid == user_uuid:
                 continue
-            session = get_session(member_uuid)
-            if session:
+            target_session = get_session(member_uuid)
+            if target_session:
                 try:
-                    session["conn"].sendall(json.dumps(encrypt_message(msg, session["aes_key"])).encode())
+                    group_name = get_group_name_by_id(to)
+                    message = {
+                        "type": "group_file",
+                        "from": session["username"],
+                        "to": group_name,
+                        "to_type": "group",  
+                        "payload": msg['payload'], 
+                        "payload_type": "file",
+                        "filename": msg["filename"], 
+                        "timestamp": datetime.utcnow().isoformat() + "Z"
+                    }
+                    target_session["conn"].sendall(json.dumps(encrypt_message(message, target_session["aes_key"])).encode())
                     delivered.append(member_uuid)
                 except:
                     logger.error(f"Failed to send to {member_uuid}")
