@@ -17,6 +17,7 @@ from protocol.handler import (
     create_group_message,
     add_user_to_message_group,
     broadcast_online_users,
+    broadcast_offline_users,
     send_files
 )
 
@@ -145,5 +146,6 @@ def handle_client_connection(connstream, addr):
     finally:
         if user_uuid:
             remove_session(user_uuid)
+            broadcast_offline_users(user_uuid, session)
             logger.info(f"User {username} ({user_uuid}) is offline")
         connstream.close()

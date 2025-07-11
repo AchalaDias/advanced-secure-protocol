@@ -1,4 +1,5 @@
 import json, base64
+from datetime import datetime
 from protocol.logger import get_logger
 from db.user_model import register_user, authenticate_user, user_exists
 from protocol.crypto import decrypt_message, encrypt_message
@@ -333,10 +334,44 @@ def broadcast_online_users(user_uuid, new_user_session):
             continue
         if session:
             new_online_user = {
-            "type": "new_online_user",
-            "uuid": user_uuid,
+            "type": "user_status",
+            "user_id": user_uuid,
+            "status": "online",
             "name": new_user_session["username"],
-            "ip": new_user_session["ip"]
+            "ip": new_user_session["ip"],
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+            encrypted = encrypt_message(new_online_user, session["aes_key"])
+            try:
+                session["conn"].sendall(json.dumps(encrypted).encode())
+            except Exception as e:
+                logger.error(f"Error sending new online user alret - {session['username']}({uid}): {e}")
+
+def broadcast_offline_users(user_uuid, new_user_session):
+    """
+    Broadcasts the status of disconnected user to all other online users.
+
+    Args:
+        user_uuid (str): UUID of the newly connected user.
+        session (dict): Session information of the new user (unused here).
+
+    Behavior:
+        - Iterates over all active user sessions.
+        - Skips the newly connected user.
+        - Prepares an offline user notification (UUID, name, IP).
+        - Encrypts and sends the notification to each online user.
+    """                       
+    for uid, session in get_all_sessions().items():
+        if uid == user_uuid:
+            continue
+        if session:
+            new_online_user = {
+            "type": "user_status",
+            "user_id": user_uuid,
+            "status": "offline",
+            "name": new_user_session["username"],
+            "ip": new_user_session["ip"],
+            "timestamp": datetime.utcnow().isoformat() + "Z"
             }
             encrypted = encrypt_message(new_online_user, session["aes_key"])
             try:
