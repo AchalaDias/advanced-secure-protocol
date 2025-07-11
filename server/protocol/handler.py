@@ -314,31 +314,32 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
     }
     connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
     
-def broadcast_online_users(user_uuid, session, connstream):
+def broadcast_online_users(user_uuid, new_user_session):
     """
-    Sends a list of currently online users to the requesting client.
+    Broadcasts the presence of a newly connected user to all other online users.
 
     Args:
-        user_uuid (str): UUID of the requesting user.
-        session (dict): Session info of the requesting user.
-        connstream: Secure connection to the requesting client.
+        user_uuid (str): UUID of the newly connected user.
+        session (dict): Session information of the new user (unused here).
 
     Behavior:
-        - Retrieves all active sessions.
-        - Excludes the requester from the list.
-        - Sends back a response with UUID, username, and IP of each online user.
-    """                          
+        - Iterates over all active user sessions.
+        - Skips the newly connected user.
+        - Prepares an online user notification (UUID, name, IP).
+        - Encrypts and sends the notification to each online user.
+    """                       
     for uid, session in get_all_sessions().items():
         if uid == user_uuid:
             continue
-        new_online_user = {
-            "uuid": uid,
-            "name": session["username"],
-            "ip": session["ip"]
-        }
         if session:
+            new_online_user = {
+            "type": "new_online_user",
+            "uuid": user_uuid,
+            "name": new_user_session["username"],
+            "ip": new_user_session["ip"]
+            }
             encrypted = encrypt_message(new_online_user, session["aes_key"])
             try:
                 session["conn"].sendall(json.dumps(encrypted).encode())
             except Exception as e:
-                logger.error(f"Error sending to new online user alret - {session['username']}({uid}): {e}")
+                logger.error(f"Error sending new online user alret - {session['username']}({uid}): {e}")

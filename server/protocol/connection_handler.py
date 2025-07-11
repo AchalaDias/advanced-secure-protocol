@@ -16,6 +16,7 @@ from protocol.handler import (
     get_online_users, 
     create_group_message,
     add_user_to_message_group,
+    broadcast_online_users,
     send_files
 )
 
@@ -86,7 +87,9 @@ def handle_client_connection(connstream, addr):
                         "message": "Unauthorized connection"
                     }).encode())
                     break
-             
+                
+                # Inform other users or peer servers about the new user
+                broadcast_online_users(user_uuid, session)
                 # ====================== User to User Messaging =====================
                 # Passing message between users (Private messages)
                 if msg.get("type") == "message" and msg.get("to_type") == "user":
