@@ -1,5 +1,3 @@
-# Advanced Secure Protocol
-
 # Secure Chat Protocol Server
 
 This is a secure chat server built using Python and TLS-encrypted sockets. It supports user-to-user messaging, group chat, and secure file transfer. The system ensures confidentiality, integrity, and authentication using modern cryptographic protocols.
