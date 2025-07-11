@@ -8,7 +8,7 @@ from protocol.crypto import (
     encrypt_message
 )
 from protocol.handler import ( 
-    process_message, 
+    user_authentication, 
     extract_incoming_message, 
     user_to_user_message, 
     user_to_group_message, 
@@ -59,7 +59,7 @@ def handle_client_connection(connstream, addr):
         msg = extract_incoming_message(data, connstream, aes_key)     
     
         # User Authentication
-        response_data, user_uuid, username = process_message(msg)
+        response_data, user_uuid, username = user_authentication(msg)
         if user_uuid:
             register_session(user_uuid, username, connstream, aes_key)
             

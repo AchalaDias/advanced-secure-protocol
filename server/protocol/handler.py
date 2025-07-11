@@ -4,7 +4,7 @@ from protocol.crypto import decrypt_message, encrypt_message
 from db.group_model import get_group_members, add_user_to_group, create_group
 from protocol.session_manager import get_session, get_all_sessions, get_session_by_socket
 
-def process_message(data):
+def user_authentication(data):
     """
     Handles user registration and login requests.
 
