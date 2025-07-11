@@ -80,6 +80,7 @@ def handle_client_connection(connstream, addr):
                 # Validate session
                 user_uuid, session = get_session_by_socket(connstream)
                 if not session:
+                    logger.warning(f"Unauthorized connection {user_uuid}")
                     connstream.sendall(json.dumps({
                         "type": "error",
                         "message": "Unauthorized connection"
@@ -124,6 +125,7 @@ def handle_client_connection(connstream, addr):
                     send_files(msg, user_uuid, session, connstream, aes_key)
                 # ===========================================================================      
                 else:
+                    logger.error(f"Unknown message type")
                     connstream.sendall(json.dumps({
                         "type": "error",
                         "message": "Unknown message type"

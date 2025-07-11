@@ -143,8 +143,9 @@ def user_to_group_message(msg, user_uuid, session):
             encrypted = encrypt_message(msg, recipient_session["aes_key"])
             try:
                 recipient_session["conn"].sendall(json.dumps(encrypted).encode())
+                logger.info(f"Broadcasting message user: {msg['from']} -> group ID({group_id})")
             except Exception as e:
-                logger.error(f"[!] Error sending to {member_uuid}: {e}")               
+                logger.error(f"Error sending to {member_uuid}: {e}")               
                      
 def get_online_users(user_uuid, session, connstream):
     """
@@ -340,4 +341,4 @@ def broadcast_online_users(user_uuid, session, connstream):
             try:
                 session["conn"].sendall(json.dumps(encrypted).encode())
             except Exception as e:
-                logger.error(f"Error sending to new online user alret - {session["username"]}({uid}): {e}")
+                logger.error(f"Error sending to new online user alret - {session['username']}({uid}): {e}")

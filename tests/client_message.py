@@ -31,7 +31,7 @@ def recv_messages(sock):
 
             print(f"\n[INCOMING] {msg}")
         except Exception as e:
-            print(f"[!] Error receiving: {e}")
+            print(f"Error receiving: {e}")
             # break
 
 def start_client():

@@ -38,7 +38,7 @@ def recv_messages(sock):
             else:
                 print(f"\n[INCOMING] {msg}")
         except Exception as e:
-            print(f"[!] Error receiving: {e}")
+            print(f"Error receiving: {e}")
 
 def start_client():
     global aes_key
@@ -105,13 +105,13 @@ def start_client():
                 file_path = input("Path to file: ").strip()
 
                 if not os.path.exists(file_path):
-                    print("[!] File not found.")
+                    print("File not found.")
                     continue
 
                 file_size = os.path.getsize(file_path)
                 filename = os.path.basename(file_path)
                 if file_size > 10 * 1024 * 1024:
-                    print("[!] File exceeds 10MB limit. Aborted.")
+                    print("File exceeds 10MB limit. Aborted.")
                     continue
 
                 with open(file_path, "rb") as f:
