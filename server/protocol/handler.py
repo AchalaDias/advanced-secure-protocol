@@ -1,8 +1,11 @@
 import json, base64
+from protocol.logger import get_logger
 from db.user_model import register_user, authenticate_user, user_exists
 from protocol.crypto import decrypt_message, encrypt_message
 from db.group_model import get_group_members, add_user_to_group, create_group
-from protocol.session_manager import get_session, get_all_sessions, get_session_by_socket
+from protocol.session_manager import get_session, get_all_sessions
+
+logger = get_logger()
 
 def user_authentication(data):
     """
@@ -103,7 +106,7 @@ def user_to_user_message(msg, connstream, user_uuid, session):
       
         forward_msg = encrypt_message(msg, target_aes_key) 
         target_conn.sendall(json.dumps(forward_msg).encode())
-        print(f"[ROUTE] Message from {msg['from']} to {message_to} routed")
+        logger.info(f"[ROUTE] Message from {msg['from']} to {message_to} routed")
     else:
         connstream.sendall(json.dumps({
             "type": "delivery_status",
@@ -141,7 +144,7 @@ def user_to_group_message(msg, user_uuid, session):
             try:
                 recipient_session["conn"].sendall(json.dumps(encrypted).encode())
             except Exception as e:
-                print(f"[!] Error sending to {member_uuid}: {e}")
+                logger.error(f"[!] Error sending to {member_uuid}: {e}")               
                      
 def get_online_users(user_uuid, session, connstream):
     """
@@ -198,6 +201,7 @@ def create_group_message(msg, user_uuid, connstream, aes_key):
             add_user_to_group(group_id, user_uuid)  # add creator to group
             response = { "type": "create_group_response", "status": "OK" }
         except Exception as e:
+            logger.error(f"Failed to add user to group: {str(e)}")
             response = {
                 "type": "error",
                 "message": f"Failed to add user to group: {str(e)}"
@@ -285,7 +289,7 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
                 session["conn"].sendall(json.dumps(encrypt_message(msg, session["aes_key"])).encode())
                 delivered.append(to)
             except:
-                print(f"[!] Error delivering file to {to}")
+                logger.error(f"Error delivering file to {to}")
 
     elif msg.get("type") == "group_file" and to_type == "group":
         members = get_group_members(to)
@@ -298,7 +302,7 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
                     session["conn"].sendall(json.dumps(encrypt_message(msg, session["aes_key"])).encode())
                     delivered.append(member_uuid)
                 except:
-                    print(f"[!] Failed to send to {member_uuid}")
+                    logger.error(f"Failed to send to {member_uuid}")
 
     response = {
         "type": "file_send_status",
@@ -308,3 +312,32 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
         "to_type": to_type
     }
     connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
+    
+def broadcast_online_users(user_uuid, session, connstream):
+    """
+    Sends a list of currently online users to the requesting client.
+
+    Args:
+        user_uuid (str): UUID of the requesting user.
+        session (dict): Session info of the requesting user.
+        connstream: Secure connection to the requesting client.
+
+    Behavior:
+        - Retrieves all active sessions.
+        - Excludes the requester from the list.
+        - Sends back a response with UUID, username, and IP of each online user.
+    """                          
+    for uid, session in get_all_sessions().items():
+        if uid == user_uuid:
+            continue
+        new_online_user = {
+            "uuid": uid,
+            "name": session["username"],
+            "ip": session["ip"]
+        }
+        if session:
+            encrypted = encrypt_message(new_online_user, session["aes_key"])
+            try:
+                session["conn"].sendall(json.dumps(encrypted).encode())
+            except Exception as e:
+                logger.error(f"Error sending to new online user alret - {session["username"]}({uid}): {e}")

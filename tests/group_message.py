@@ -40,7 +40,7 @@ def start_client():
 
     with socket.create_connection((SERVER_HOST, SERVER_PORT)) as sock:
         with context.wrap_socket(sock, server_hostname=SERVER_HOST) as ssock:
-            print("[+] Connected to secure server")
+            print("Connected to secure server")
 
             # Step 1: Receive RSA public key
             key_data = ssock.recv(2048)

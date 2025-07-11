@@ -1,4 +1,5 @@
 import json, base64
+from protocol.logger import get_logger
 from protocol.session_manager import register_session, remove_session, get_session_by_socket
 from db.group_model import get_groups_by_user
 from protocol.crypto import (
@@ -18,8 +19,10 @@ from protocol.handler import (
     send_files
 )
 
+logger = get_logger()
+
 def handle_client_connection(connstream, addr):
-    print(f"[+] Connection from {addr}")
+    logger.info(f"[+] Connection from {addr}")
     user_uuid = None
     
     # Generate RSA keys per session
@@ -32,9 +35,8 @@ def handle_client_connection(connstream, addr):
             "type": "key_exchange",
             "public_key": public_key_pem
         }).encode())
-        print("Public Key Sent")
     except Exception as e:
-        print(f"[!] Failed to send public key: {e}")
+        logger.error(f"Failed to send public key: {e}")
         return
 
     # Step 2: Receive encrypted AES session key
@@ -47,7 +49,7 @@ def handle_client_connection(connstream, addr):
         encrypted_key = base64.b64decode(key_msg["key"])
         aes_key = decrypt_aes_key(encrypted_key, private_key)
     except Exception as e:
-        print(f"[!] Failed to receive AES key: {e}")
+        logger.error(f"Failed to receive AES key: {e}")
         return
 
     try:
@@ -62,6 +64,7 @@ def handle_client_connection(connstream, addr):
         response_data, user_uuid, username = user_authentication(msg)
         if user_uuid:
             register_session(user_uuid, username, connstream, aes_key)
+            logger.info(f"User {username} ({user_uuid}) is online")
             
         connstream.sendall(json.dumps(response_data).encode())
 
@@ -126,15 +129,16 @@ def handle_client_connection(connstream, addr):
                         "message": "Unknown message type"
                     }).encode())
             except Exception as msg_err:
-                print(f"Failed to process message: {msg_err}")
+                logger.error(f"Failed to process message: {msg_err}")
                 connstream.sendall(json.dumps({
                     "type": "error",
                     "message": "Failed to parse message"
                 }).encode())
 
     except Exception as e:
-        print(f"[!] Exception with {addr}: {e}")
+        logger.error(f"Exception with {addr}: {e}")
     finally:
         if user_uuid:
             remove_session(user_uuid)
+            logger.info(f"User {username} ({user_uuid}) is offline")
         connstream.close()

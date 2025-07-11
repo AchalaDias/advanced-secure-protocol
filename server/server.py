@@ -3,8 +3,10 @@ import ssl
 import threading
 import os
 from db.db_init import init_db
+from protocol.logger import get_logger
 from protocol.connection_handler import handle_client_connection
 
+logger = get_logger()
 HOST = '0.0.0.0'
 PORT = 5001
 
@@ -28,7 +30,7 @@ def start_server():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind((HOST, PORT))
         sock.listen(5)
-        print(f"[SERVER] TLS Chat Server running on {HOST}:{PORT}")
+        logger.info(f"[SERVER] TLS Chat Server running on {HOST}:{PORT}")
 
         while True:
             client_sock, addr = sock.accept()

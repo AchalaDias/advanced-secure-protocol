@@ -1,5 +1,8 @@
 from .db_config import DB_CONFIG
 import mysql.connector
+from protocol.logger import get_logger
+
+logger = get_logger()
 
 # Database schema
 def init_db():
@@ -44,4 +47,4 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print("[DB INIT] Database initialized.")
+    logger.info("[DB INIT] Database initialized.")
