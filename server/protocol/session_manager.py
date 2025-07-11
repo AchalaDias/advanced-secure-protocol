@@ -64,6 +64,7 @@ def get_all_sessions():
     return active_sessions.copy()
 
 def get_session_by_socket(sock):
+    """Return sessions by connection."""
     for uuid, session in active_sessions.items():
         if session["conn"] == sock:
             return uuid, session

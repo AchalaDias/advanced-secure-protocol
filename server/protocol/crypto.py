@@ -42,7 +42,7 @@ def encrypt_message(full_message: dict, aes_key: bytes) -> dict:
         "ciphertext": base64.b64encode(ciphertext).decode(),
         "iv": base64.b64encode(iv).decode()
     }
-
+# AESGCM decrypt (session key passed externally)
 def decrypt_message(encrypted_msg: dict, aes_key: bytes) -> dict:
     aesgcm = AESGCM(aes_key)
     iv = base64.b64decode(encrypted_msg["iv"])

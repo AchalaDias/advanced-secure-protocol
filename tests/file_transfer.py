@@ -130,7 +130,8 @@ def start_client():
 
                 ssock.sendall(json.dumps(encrypt_message(msg)).encode())
                 print("File sent.")
-
+                
+# Message Encryption before sending to server
 def encrypt_message(message_dict):
     global aes_key
     aesgcm = AESGCM(aes_key)
@@ -141,7 +142,8 @@ def encrypt_message(message_dict):
         "ciphertext": base64.b64encode(ciphertext).decode(),
         "iv": base64.b64encode(iv).decode()
     }
-
+    
+# Decrypt incoming message
 def decrypt_message(encrypted_msg):
     global aes_key
     aesgcm = AESGCM(aes_key)

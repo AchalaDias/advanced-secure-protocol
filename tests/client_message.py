@@ -11,10 +11,6 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 SERVER_HOST = 'localhost'
 SERVER_PORT = 5001
-
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-CERT_FILE = os.path.join(CURRENT_DIR, "server", "keys", "cert.pem")
-
 aes_key = None
 
 def recv_messages(sock):
@@ -120,6 +116,7 @@ def start_client():
                 encrypted = encrypt_message(message)
                 ssock.sendall(json.dumps(encrypted).encode())
 
+# Message Encryption before sending to server
 def encrypt_message(message_dict):
     global aes_key
     aesgcm = AESGCM(aes_key)
@@ -131,7 +128,7 @@ def encrypt_message(message_dict):
         "ciphertext": base64.b64encode(ciphertext).decode(),
         "iv": base64.b64encode(iv).decode()
     }
-
+# Decrypt incoming message
 def decrypt_message(encrypted_msg):
     global aes_key
     aesgcm = AESGCM(aes_key)

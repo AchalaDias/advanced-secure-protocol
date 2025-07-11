@@ -4,7 +4,19 @@ from protocol.crypto import decrypt_message, encrypt_message
 from db.group_model import get_group_members, add_user_to_group, create_group
 from protocol.session_manager import get_session, get_all_sessions, get_session_by_socket
 
-def process_message(data, conn=None):
+def process_message(data):
+    """
+    Handles user registration and login requests.
+
+    Args:
+        data (dict): Contains 'type', 'username', and 'password'.
+        
+    Returns:
+        tuple: (response, user_uuid, username)
+            - response: Result dict with 'status' and 'message'
+            - user_uuid: UUID if successful, else None
+            - username: Provided username or None
+    """
     msg_type = data.get("type")
     username = data.get("username")
     password = data.get("password")
@@ -24,6 +36,17 @@ def process_message(data, conn=None):
     return {"status": "ERROR", "message": "Unknown command"}, None, None
 
 def extract_incoming_message(data, connstream, aes_key):
+    """
+    Parses and decrypts an incoming message.
+
+    Args:
+        data (str): JSON-encoded message from the client.
+        connstream: Secure socket connection (used to send error responses).
+        aes_key: AES key for decrypting secure messages.
+
+    Returns:
+        dict or None: The parsed (and decrypted if needed) message, or None on error.
+    """
     msg = {}
     try:
         raw = json.loads(data)            
@@ -49,6 +72,21 @@ def extract_incoming_message(data, connstream, aes_key):
     return msg
 
 def user_to_user_message(msg, connstream, user_uuid, session):
+    """
+    Handles routing of a message from one user to another.
+
+    Args:
+        msg (dict): Message payload.
+        connstream: Sender's secure connection (used to send delivery status).
+        user_uuid (str): UUID of the sender.
+        session (dict): Sender's session info.
+
+    Behavior:
+        - Retrieves the target user's session.
+        - Prevents sending messages to self.
+        - Encrypts and forwards the message if the target is online.
+        - Notifies sender if the target is offline or invalid.
+    """
     target_uuid = msg.get("to")
     target_session = get_session(target_uuid)
     target_aes_key = target_session["aes_key"]
@@ -74,6 +112,20 @@ def user_to_user_message(msg, connstream, user_uuid, session):
         }).encode())
         
 def user_to_group_message(msg, user_uuid, session):
+    """
+    Sends a message from a user to all members of a group.
+
+    Args:
+        msg (dict): The message payload.
+        user_uuid (str): UUID of the sender.
+        session (dict): Sender's session info.
+
+    Behavior:
+        - Adds sender's username to the message.
+        - Retrieves group members using the group_id.
+        - Encrypts the message with each recipient's AES key.
+        - Sends the encrypted message to each online group member.
+    """
     group_id = msg.get("to")
     msg["from"] =  session["username"]
     # Lookup group members
@@ -91,7 +143,20 @@ def user_to_group_message(msg, user_uuid, session):
             except Exception as e:
                 print(f"[!] Error sending to {member_uuid}: {e}")
                      
-def get_online_users(user_uuid, session, connstream):                          
+def get_online_users(user_uuid, session, connstream):
+    """
+    Sends a list of currently online users to the requesting client.
+
+    Args:
+        user_uuid (str): UUID of the requesting user.
+        session (dict): Session info of the requesting user.
+        connstream: Secure connection to the requesting client.
+
+    Behavior:
+        - Retrieves all active sessions.
+        - Excludes the requester from the list.
+        - Sends back a response with UUID, username, and IP of each online user.
+    """                          
     online_users = []
     for uid, session in get_all_sessions().items():
         if uid == user_uuid:
@@ -109,6 +174,20 @@ def get_online_users(user_uuid, session, connstream):
     connstream.sendall(json.dumps(response).encode())
     
 def create_group_message(msg, user_uuid, connstream, aes_key):
+    """
+    Handles the creation of a new group and adds the creator to it.
+
+    Args:
+        msg (dict): Incoming message.
+        user_uuid (str): UUID of the user creating the group.
+        connstream: Secure connection to the client.
+        aes_key: AES key for encrypting the response.
+
+    Behavior:
+        - Validates presence of 'group_name'.
+        - Attempts to create a new group and add the creator.
+        - Sends an encrypted success or error response back to the client.
+    """
     group_name = msg.get("group_name")
     # Validate
     if not group_name:
@@ -125,7 +204,21 @@ def create_group_message(msg, user_uuid, connstream, aes_key):
             }
         connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
         
-def add_user_to_message_group(msg, connstream, aes_key):     
+def add_user_to_message_group(msg, connstream, aes_key):  
+    """
+    Adds a specified user to a group.
+
+    Args:
+        msg (dict): Incoming message.
+        connstream: Secure connection to the client.
+        aes_key: AES key for encrypting the response.
+
+    Behavior:
+        - Validates input fields.
+        - Checks if the target user exists.
+        - Adds the user to the group if valid.
+        - Sends an encrypted success or error response back to the client.
+    """   
     group_id = msg.get("group_id")
     target_uuid = msg.get("user_id")
 
@@ -152,8 +245,23 @@ def add_user_to_message_group(msg, connstream, aes_key):
             }
     connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
     
-    
-def send_files(msg, user_uuid, session, connstream, aes_key):  
+def send_files(msg, user_uuid, session, connstream, aes_key):
+    """
+    Handles secure file transfer to a user or group.
+
+    Args:
+        msg (dict): Incoming file message.
+        user_uuid (str): UUID of the sender.
+        session (dict): Sender's session info.
+        connstream: Secure connection to the sender.
+        aes_key: AES key to encrypt the response back to the sender.
+
+    Behavior:
+        - Decodes the base64 file data.
+        - Enforces a 10MB file size limit.
+        - Forwards the file to the target user or each online group member.
+        - Tracks successful deliveries and returns a status response to the sender.
+    """  
     msg["from"] =  session["username"]
     file_data = base64.b64decode(msg["payload"])
     to = msg.get("to")

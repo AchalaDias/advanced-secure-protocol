@@ -2,6 +2,15 @@ import mysql.connector
 from db.db_config import DB_CONFIG
 
 def create_group(group_name):
+    """
+    Creates a new group in the database.
+
+    Args:
+        group_name (str): The name of the group to create.
+
+    Returns:
+        int: The ID of the newly created group.
+    """
     conn = mysql.connector.connect(**DB_CONFIG)
     cur = conn.cursor()
     cur.execute("INSERT INTO `groups` (group_name) VALUES (%s)", (group_name,))
@@ -12,6 +21,13 @@ def create_group(group_name):
     return group_id
 
 def add_user_to_group(group_id, user_uuid):
+    """
+    Adds a user to a group in the database.
+
+    Args:
+        group_id (int): The ID of the group.
+        user_uuid (str): The UUID of the user to add.
+    """
     conn = mysql.connector.connect(**DB_CONFIG)
     cur = conn.cursor()
     cur.execute("INSERT IGNORE INTO group_members (group_id, user_uuid) VALUES (%s, %s)", (group_id, user_uuid))
@@ -20,6 +36,15 @@ def add_user_to_group(group_id, user_uuid):
     conn.close()
 
 def get_group_members(group_id):
+    """
+    Retrieves all user UUIDs belonging to a specific group.
+
+    Args:
+        group_id (int): The ID of the group.
+
+    Returns:
+        list: A list of user UUIDs who are members of the group.
+    """
     conn = mysql.connector.connect(**DB_CONFIG)
     cur = conn.cursor()
     cur.execute("SELECT user_uuid FROM group_members WHERE group_id = %s", (group_id,))
@@ -29,6 +54,15 @@ def get_group_members(group_id):
     return members
 
 def get_groups_by_user(user_uuid):
+    """
+    Retrieves all groups that a user is a member of.
+
+    Args:
+        user_uuid (str): The UUID of the user.
+
+    Returns:
+        list: A list of dictionaries, each containing 'group_id' and 'group_name'.
+    """
     conn = mysql.connector.connect(**DB_CONFIG)
     cur = conn.cursor()
     cur.execute("""

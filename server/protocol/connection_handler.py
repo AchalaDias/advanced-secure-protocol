@@ -59,7 +59,7 @@ def handle_client_connection(connstream, addr):
         msg = extract_incoming_message(data, connstream, aes_key)     
     
         # User Authentication
-        response_data, user_uuid, username = process_message(msg, connstream)
+        response_data, user_uuid, username = process_message(msg)
         if user_uuid:
             register_session(user_uuid, username, connstream, aes_key)
             

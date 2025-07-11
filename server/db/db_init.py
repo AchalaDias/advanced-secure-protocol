@@ -1,6 +1,7 @@
 from .db_config import DB_CONFIG
 import mysql.connector
 
+# Database schema
 def init_db():
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
