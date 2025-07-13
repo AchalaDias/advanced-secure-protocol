@@ -77,25 +77,25 @@ docker-compose -f docker-compose.mysql.yml up -d
 ```
 This will start a MySQL container using the following credentials:
 
-    *Host: `localhost`
-    *Port: `3306`
-    *Username: `root`
-    *Password: `rootpass`
-    *Database: `chatapp`
+- Host: `localhost`
+- Port: `3306`
+- Username: `root`
+- Password: `rootpass`
+- Database: `chatapp`
 
 You can modify these in the file if needed.
 
 ### 4. Update Database Configuration
 Update your DB connection settings in: `server/db/db_config.py`
-    *Note: The defualt configs are to run the app with docker
+    - Note: The defualt configs are to run the app with docker
 
 
 ### 4. ▶️ Run the App
-*After MySQL is running and DB config is set:
+- After MySQL is running and DB config is set:
 ```bash
 python server/server.py
 ```
-*You're now ready to test, debug, or explore the protocol manually.
+- You're now ready to test, debug, or explore the protocol manually.
 
 
 # Project Structure
