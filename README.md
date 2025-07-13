@@ -124,11 +124,52 @@ You can run multiple client scripts in different terminals to simulate different
 ```bash
 python clients/client_message.py
 ```
+- Step 1: Start Client A
+    - Enter r to register, then:
+    ```bash
+        Username: alice
+        Password: Alice@123
+    ```
+- Step 2: Start Client B
+    - Enter r to register, then:
+    ```bash
+        Username: bob
+        Password: Bob@1234
+    ```
+- ✅ You can also choose `l` to log in with an existing user.
+
+- After login, the client will:
+    - Request the list of online users.
+    - Display all users with their uuid, username, and ip.
+- From Client A, select Bob’s uuid
+Type a message:
+```bash
+Send to user UUID: <bob's uuid>
+Enter message: Hello Bob!
+```
+- From Client B
+Bob will receive Alice’s message in real time in his terminal.
+Repeat to simulate chat between users.
+
 
 #### 2. User to Group Message passing
 ```bash
 python clients/group_message.py
 ```
+
+- Step 1: Login as Alice
+    - After login, choose to:
+    - Create a group (e.g. "team")
+    - Add Bob’s UUID to the group
+
+- Step 2: From Alice’s client
+    - Send a group message to group ID (e.g. 1):
+    - Send to user UUID: 1
+        Enter message: Hello team!
+- Step 3: From Bob’s client
+
+Bob (if online and in group) receives the message.
+🧪 You can add more users to the group and repeat the test.
 
 #### 1. File Transfering Message passing
 ```bash
