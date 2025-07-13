@@ -19,6 +19,23 @@ This is a secure chat server built using Python and TLS-encrypted sockets. It su
 
 ---
 
+# Project Structure
+```
+advanced-secure-protocol/
+│
+├── server/
+│   ├── db/                  # MySQL DB config and schema
+│   ├── keys/                # TLS certificates
+│   ├── protocol/            # Core protocol handlers
+│   ├── server.py            # Main TLS socket server
+│   └── Dockerfile           # Docker configuration for server
+│
+├── clients/                  # Example test clients
+│
+├── docker-compose.yml       # Docker Compose configuration
+└── README.md
+```
+
 ## 🐳 Docker Setup
 
 ### Prerequisites
@@ -97,23 +114,6 @@ python server/server.py
 ```
 - You're now ready to test, debug, or explore the protocol manually.
 
-
-# Project Structure
-```
-advanced-secure-protocol/
-│
-├── server/
-│   ├── db/                  # MySQL DB config and schema
-│   ├── keys/                # TLS certificates
-│   ├── protocol/            # Core protocol handlers
-│   ├── server.py            # Main TLS socket server
-│   └── Dockerfile           # Docker configuration for server
-│
-├── clients/                  # Example test clients
-│
-├── docker-compose.yml       # Docker Compose configuration
-└── README.md
-```
 # 🧪 Testing
 
 You can run test client scripts or custom test scripts from the client/ directory.
