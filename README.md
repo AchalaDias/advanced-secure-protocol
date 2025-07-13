@@ -25,12 +25,12 @@ This is a secure chat server built using Python and TLS-encrypted sockets. It su
 
 - Docker
 - Docker Compose
-- Generate TLS certificates  (Already Provided for Debugging)
-	Default self-signed TLS certificates are already included in:
+- Generate TLS certificates (Already Provided for Debugging)
+	* Default self-signed TLS certificates are already included in:
 
 ```bash
 
-# These are provided **for local testing and debugging only**.
+# These are provided for local testing and debugging only.
 # If you'd like to generate new self-signed certificates, run:
 
 mkdir -p server/keys
