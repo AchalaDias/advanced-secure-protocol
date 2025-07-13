@@ -180,8 +180,9 @@ Files larger than 10MB will be automatically rejected by the server.
 - Step 1: From Alice's client
     - After login and AES key exchange, choose a file to send:
         ```bash
-            Send to user UUID: <bob's uuid>
-            Enter message: /path/to/testfile.pdf
+            Send to (user/group): user or gorup
+            Enter UUID (user) or Group ID (group): <bob's uuid> or <gorup ID>
+            Path to file: /path/to/testfile.pdf
         ```
     - The file will be encrypted, sent to the server, and forwarded to Bob.
 - Step 2: From Bob’s client
