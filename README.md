@@ -107,7 +107,7 @@ advanced-secure-protocol/
 │   ├── keys/                # TLS certificates
 │   ├── protocol/            # Core protocol handlers
 │   ├── server.py            # Main TLS socket server
-│   └── Dockerfile
+│   └── Dockerfile           # Docker configuration for server
 │
 ├── clients/                  # Example test clients
 │
@@ -118,3 +118,19 @@ advanced-secure-protocol/
 
 You can run test client scripts or custom test scripts from the client/ directory.
 Ensure both clients connect to the server, log in/register, and securely exchange messages or files.
+You can run multiple client scripts in different terminals to simulate different users. The following scenarios are supported and tested:
+
+#### 1. User to User Message passing
+```bash
+python clients/client_message.py
+```
+
+#### 2. User to Group Message passing
+```bash
+python clients/group_message.py
+```
+
+#### 1. File Transfering Message passing
+```bash
+python clients/file_transfer.py
+```
