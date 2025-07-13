@@ -36,8 +36,6 @@ advanced-secure-protocol/
 └── README.md
 ```
 
-## 🐳 Docker Setup
-
 ### Prerequisites
 
 - Docker
@@ -54,7 +52,7 @@ mkdir -p server/keys
 openssl req -newkey rsa:2048 -nodes -keyout server/keys/key.pem -x509 -days 365 -out server/keys/cert.pem
 ```
 
-## 🧪 Run With Docker 
+## 🐳 Run With Docker 
 ### 1. Clone the repository
 
 ```bash
