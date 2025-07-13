@@ -120,7 +120,7 @@ You can run test client scripts or custom test scripts from the client/ director
 Ensure both clients connect to the server, log in/register, and securely exchange messages or files.
 You can run multiple client scripts in different terminals to simulate different users. The following scenarios are supported and tested:
 
-#### 1. User to User Message passing
+### 1. User to User Message passing
 ```bash
 python clients/client_message.py
 ```
@@ -152,7 +152,7 @@ Bob will receive Alice’s message in real time in his terminal.
 Repeat to simulate chat between users.
 
 
-#### 2. User to Group Message passing
+### 2. User to Group Message passing
 ```bash
 python clients/group_message.py
 ```
@@ -171,7 +171,7 @@ python clients/group_message.py
 Bob (if online and in group) receives the message.
 🧪 You can add more users to the group and repeat the test.
 
-#### 1. File Transfering Message passing
+### 1. File Transfering Message passing
 ```bash
 python clients/file_transfer.py
 ```
