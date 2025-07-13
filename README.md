@@ -168,10 +168,22 @@ python clients/group_message.py
         Enter message: Hello team!
 - Step 3: From Bob’s client
 
-Bob (if online and in group) receives the message.
-🧪 You can add more users to the group and repeat the test.
+- Bob (if online and in group) receives the message.
+- 🧪 You can add more users to the group and repeat the test.
 
 ### 1. File Transfering Message passing
 ```bash
 python clients/file_transfer.py
 ```
+Files larger than 10MB will be automatically rejected by the server.
+
+- Step 1: From Alice's client
+    - After login and AES key exchange, choose a file to send:
+        ```bash
+            Send to user UUID: <bob's uuid>
+            Enter message: /path/to/testfile.pdf
+        ```
+    - The file will be encrypted, sent to the server, and forwarded to Bob.
+- Step 2: From Bob’s client
+    - The file will be saved with the original filename in the local directory.
+Same applies for group file transfer using the group ID instead of user UUID.
