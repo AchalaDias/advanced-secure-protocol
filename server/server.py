@@ -7,8 +7,8 @@ from protocol.logger import get_logger
 from protocol.connection_handler import handle_client_connection
 
 logger = get_logger()
-HOST = '0.0.0.0'
-PORT = 5001
+HOST = os.getenv("SERVER_HOST", "127.0.0.1")
+PORT = int(os.getenv("SERVER_PORT", 5001))
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 CERT_FILE = os.path.join(CURRENT_DIR, "keys", "cert.pem")
