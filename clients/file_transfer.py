@@ -20,22 +20,15 @@ def recv_messages(sock):
             data = sock.recv(4096)
             if not data:
                 break
-            msg = json.loads(data.decode())
 
-            if msg.get("type") == "secure":
-                aesgcm = AESGCM(aes_key)
-                iv = base64.b64decode(msg["iv"])
-                ciphertext = base64.b64decode(msg["ciphertext"])
-                plaintext = aesgcm.decrypt(iv, ciphertext, None)
-                msg = json.loads(plaintext.decode())
+            msg = decrypt_message(data)
 
             if msg.get("payload_type") == "file":
                 original_filename = msg.get("filename", "received_file.bin")
                 filename = f"recv_{datetime.utcnow().strftime('%H%M%S')}_{original_filename}"
                 with open(filename, "wb") as f:
                     f.write(base64.b64decode(msg["payload"]))
-                print(f"\n[INCOMING] {msg}")
-                print(f"\nFile received and saved as {filename}")
+                print(f"\n[INCOMING FILE] From: {msg.get('from')} -> Saved as: {filename}")
             else:
                 print(f"\n[INCOMING] {msg}")
         except Exception as e:
@@ -77,21 +70,16 @@ def start_client():
                 "username": username,
                 "password": password
             })
-            ssock.sendall(json.dumps(encrypted).encode())
-            response = json.loads(ssock.recv(4096).decode())
-            if response.get("type") == "secure":
-                response = decrypt_message(response)
+            ssock.sendall(encrypted)
+            response = decrypt_message(ssock.recv(4096))
 
             print("[SERVER]:", response)
             if response.get("status") != "OK":
                 return
-            
+
             # Step 4: Request online users
-            encrypted = encrypt_message({ "type": "get_online_users" })
-            ssock.sendall(json.dumps(encrypted).encode())
-            response = json.loads(ssock.recv(4096).decode())
-            if response.get("type") == "secure":
-                response = decrypt_message(response)
+            ssock.sendall(encrypt_message({ "type": "get_online_users" }))
+            response = decrypt_message(ssock.recv(4096))
             print("[SERVER] - ALL ONLINE USERS:", response['online_users'])
 
             uuid = response.get("uuid")
@@ -129,29 +117,26 @@ def start_client():
                     "timestamp": datetime.utcnow().isoformat() + "Z"
                 }
 
-                ssock.sendall(json.dumps(encrypt_message(msg)).encode())
+                ssock.sendall(encrypt_message(msg))
                 print("File sent.")
-                
-# Message Encryption before sending to server
+
+# AES-GCM encryption (binary-safe)
 def encrypt_message(message_dict):
     global aes_key
     aesgcm = AESGCM(aes_key)
     iv = os.urandom(12)
-    ciphertext = aesgcm.encrypt(iv, json.dumps(message_dict).encode(), None)
-    return {
-        "type": "secure",
-        "ciphertext": base64.b64encode(ciphertext).decode(),
-        "iv": base64.b64encode(iv).decode()
-    }
-    
-# Decrypt incoming message
-def decrypt_message(encrypted_msg):
+    plaintext = json.dumps(message_dict).encode('utf-8')
+    ciphertext = aesgcm.encrypt(iv, plaintext, None)
+    return iv + ciphertext  # raw bytes (iv + ciphertext)
+
+# AES-GCM decryption
+def decrypt_message(data):
     global aes_key
     aesgcm = AESGCM(aes_key)
-    iv = base64.b64decode(encrypted_msg["iv"])
-    ciphertext = base64.b64decode(encrypted_msg["ciphertext"])
+    iv = data[:12]
+    ciphertext = data[12:]
     plaintext = aesgcm.decrypt(iv, ciphertext, None)
-    return json.loads(plaintext.decode())
+    return json.loads(plaintext.decode('utf-8'))
 
 if __name__ == "__main__":
     start_client()

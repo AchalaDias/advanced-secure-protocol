@@ -44,6 +44,40 @@ def init_db():
             FOREIGN KEY (group_id) REFERENCES `groups`(group_id)
         )
     """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS servers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255),
+            hostname VARCHAR(255),
+            port INT,
+            handshake_type VARCHAR(10),
+            public_key TEXT,
+            username VARCHAR(50),
+            password VARCHAR(255),
+            user_identifier VARCHAR(255),
+            group_identifier VARCHAR(255)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS server_users (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            server_id INT,
+            user_id VARCHAR(255),
+            name VARCHAR(255)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS server_group_messages (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            group_id VARCHAR(255),
+            user_id VARCHAR(255),
+            server_id INT
+        )
+    """)
+
 
     conn.commit()
     conn.close()
