@@ -23,7 +23,7 @@ def recv_messages(sock):
             msg = decrypt_message(data)
 
             # Pretty print only group name or user + payload
-            if msg.get("type") == "message" and msg.get("to_type") == "group":
+            if msg.get("type") == "group_message" and msg.get("to_type") == "group":
                 group = msg.get("to", "GROUP")
                 sender = msg.get("from", "User")
                 payload = msg.get("payload", "")
