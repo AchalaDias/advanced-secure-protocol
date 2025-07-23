@@ -53,41 +53,29 @@ def user_authentication(data):
 
     return {"status": "ERROR", "message": "Unknown command"}, None, None
 
-def extract_incoming_message(data, connstream, aes_key):
+def extract_incoming_message(data: bytes, connstream, aes_key):
     """
-    Parses and decrypts an incoming message.
-
+    Decrypts an incoming encrypted message sent as raw bytes.
+    
     Args:
-        data (str): JSON-encoded message from the client.
+        data (bytes): Raw bytes (iv + ciphertext) from the client.
         connstream: Secure socket connection (used to send error responses).
         aes_key: AES key for decrypting secure messages.
 
     Returns:
-        dict or None: The parsed (and decrypted if needed) message, or None on error.
+        dict or None: The decrypted message as a Python dict, or None on error.
     """
-    msg = {}
     try:
-        raw = json.loads(data)            
-    except json.JSONDecodeError:
-        connstream.sendall(json.dumps({
+        # Assume all messages after key exchange are encrypted binary
+        msg = decrypt_message(data, aes_key)
+        return msg
+    except Exception as e:
+        error_msg = {
             "type": "error",
-            "message": "Invalid JSON"
-        }).encode())
-        return
-
-    # Decrypt secure payload
-    if raw.get("type") == "secure":
-        try:
-            msg = decrypt_message(raw, aes_key)
-        except Exception as e:
-            connstream.sendall(json.dumps({
-                "type": "error",
-                "message": f"Decryption failed: {str(e)}"
-            }).encode())
-            return
-    else:
-        msg = raw 
-    return msg
+            "message": f"Decryption failed: {str(e)}"
+        }
+        connstream.sendall(encrypt_message(error_msg, aes_key))
+        return None
 
 def user_to_user_message(msg, connstream, user_uuid, session):
     """
@@ -122,20 +110,22 @@ def user_to_user_message(msg, connstream, user_uuid, session):
             "type": "message",
             "from": session["username"],
             "to": target_session['username'],
+            "from_id": user_uuid,
             "to_type": "user",  
             "payload": msg['payload'], 
             "payload_type": "text", 
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
         forward_msg = encrypt_message(message, target_aes_key) 
-        target_conn.sendall(json.dumps(forward_msg).encode())
+        target_conn.sendall(forward_msg)
         logger.info(f"[ROUTE] Message from {msg['from']} to {message_to} routed")
     else:
-        connstream.sendall(json.dumps({
+        error_msg = {
             "type": "delivery_status",
             "status": "offline",
             "message": f"User {target_uuid} is offline or Invalid"
-        }).encode())
+        }        
+        connstream.sendall(encrypt_message(error_msg, target_aes_key))
         
 def user_to_group_message(msg, user_uuid, session):
     """
@@ -175,12 +165,12 @@ def user_to_group_message(msg, user_uuid, session):
             }
             encrypted = encrypt_message(message, recipient_session["aes_key"])
             try:
-                recipient_session["conn"].sendall(json.dumps(encrypted).encode())
+                recipient_session["conn"].sendall(encrypted)
                 logger.info(f"Broadcasting message user: {message['from']} -> group ID({group_id})")
             except Exception as e:
                 logger.error(f"Error sending to {member_uuid}: {e}")               
                      
-def get_online_users(user_uuid, session, connstream):
+def get_online_users(user_uuid, session, connstream, aes_key):
     """
     Sends a list of currently online users to the requesting client.
 
@@ -208,7 +198,7 @@ def get_online_users(user_uuid, session, connstream):
         "server_id": "10.8.0.1",
         "online_users": online_users
     }
-    connstream.sendall(json.dumps(response).encode())
+    connstream.sendall(encrypt_message(response, aes_key))
     
 def create_new_group(msg, user_uuid, connstream, aes_key):
     """
@@ -240,7 +230,7 @@ def create_new_group(msg, user_uuid, connstream, aes_key):
                 "type": "error",
                 "message": f"Failed to add user to group: {str(e)}"
             }
-        connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
+        connstream.sendall(encrypt_message(response, aes_key))
         
 def add_user_to_message_group(msg, connstream, aes_key):  
     """
@@ -281,7 +271,7 @@ def add_user_to_message_group(msg, connstream, aes_key):
                 "type": "error",
                 "message": f"Failed to add user to group: {str(e)}"
             }
-    connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
+    connstream.sendall(encrypt_message(response, aes_key))
     
 def send_files(msg, user_uuid, session, connstream, aes_key):
     """
@@ -311,7 +301,7 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
             "type": "error",
             "message": "File exceeds 10MB limit"
         }
-        connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
+        connstream.sendall(encrypt_message(response, aes_key))
         return
 
     delivered = []
@@ -329,7 +319,7 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
                     "payload_type": "file", 
                     "timestamp": datetime.utcnow().isoformat() + "Z"
                 }
-                target_session["conn"].sendall(json.dumps(encrypt_message(message, target_session["aes_key"])).encode())
+                target_session["conn"].sendall(encrypt_message(message, target_session["aes_key"]))
                 delivered.append(to)
             except:
                 logger.error(f"Error delivering file to {to}")
@@ -353,7 +343,7 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
                         "filename": msg["filename"], 
                         "timestamp": datetime.utcnow().isoformat() + "Z"
                     }
-                    target_session["conn"].sendall(json.dumps(encrypt_message(message, target_session["aes_key"])).encode())
+                    target_session["conn"].sendall(encrypt_message(message, target_session["aes_key"]))
                     delivered.append(member_uuid)
                 except:
                     logger.error(f"Failed to send to {member_uuid}")
@@ -365,7 +355,7 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
         "to": to,
         "to_type": to_type
     }
-    connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())
+    connstream.sendall(encrypt_message(response, aes_key))
     
 def broadcast_online_users(user_uuid, new_user_session):
     """
@@ -395,7 +385,7 @@ def broadcast_online_users(user_uuid, new_user_session):
             }
             encrypted = encrypt_message(new_online_user, session["aes_key"])
             try:
-                session["conn"].sendall(json.dumps(encrypted).encode())
+                session["conn"].sendall(encrypted)
             except Exception as e:
                 logger.error(f"Error sending new online user alret - {session['username']}({uid}): {e}")
 
@@ -427,6 +417,6 @@ def broadcast_offline_users(user_uuid, new_user_session):
             }
             encrypted = encrypt_message(new_online_user, session["aes_key"])
             try:
-                session["conn"].sendall(json.dumps(encrypted).encode())
+                session["conn"].sendall(encrypted)
             except Exception as e:
                 logger.error(f"Error sending new online user alret - {session['username']}({uid}): {e}")

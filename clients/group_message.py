@@ -20,15 +20,16 @@ def recv_messages(sock):
             data = sock.recv(4096)
             if not data:
                 break
-            msg = json.loads(data.decode())
-            if msg.get("type") == "secure":
-                aesgcm = AESGCM(aes_key)
-                iv = base64.b64decode(msg["iv"])
-                ciphertext = base64.b64decode(msg["ciphertext"])
-                plaintext = aesgcm.decrypt(iv, ciphertext, None)
-                msg = json.loads(plaintext.decode())
+            msg = decrypt_message(data)
 
-            print(f"\n[INCOMING] {msg}")
+            # Pretty print only group name or user + payload
+            if msg.get("type") == "message" and msg.get("to_type") == "group":
+                group = msg.get("to", "GROUP")
+                sender = msg.get("from", "User")
+                payload = msg.get("payload", "")
+                print(f"\n[{group}] {sender}: {payload}")
+            else:
+                print(f"\n[INCOMING] {msg}")
         except Exception as e:
             print(f"Error receiving: {e}")
 
@@ -69,10 +70,8 @@ def start_client():
                 "username": username,
                 "password": password
             })
-            ssock.sendall(json.dumps(encrypted).encode())
-            response = json.loads(ssock.recv(4096).decode())
-            if response.get("type") == "secure":
-                response = decrypt_message(response)
+            ssock.sendall(encrypted)
+            response = decrypt_message(ssock.recv(4096))
 
             print("[SERVER]:", response)
             if response.get("status") != "OK":
@@ -80,10 +79,8 @@ def start_client():
             
             # Step 4: Request online users
             encrypted = encrypt_message({ "type": "get_online_users" })
-            ssock.sendall(json.dumps(encrypted).encode())
-            response = json.loads(ssock.recv(4096).decode())
-            if response.get("type") == "secure":
-                response = decrypt_message(response)
+            ssock.sendall(encrypted)
+            response = decrypt_message(ssock.recv(4096))
             print("[SERVER] - ALL ONLINE USERS:", response['online_users'])
             my_uuid = response.get("uuid")
 
@@ -104,11 +101,11 @@ def start_client():
                         "type": "create_group",
                         "group_name": gname
                     })
-                    ssock.sendall(json.dumps(msg).encode())
+                    ssock.sendall(msg)
 
                 elif choice == "2":
                     msg = encrypt_message({ "type": "list_my_groups" })
-                    ssock.sendall(json.dumps(msg).encode())
+                    ssock.sendall(msg)
                     
                 elif choice == "3":
                     gid = input("Group ID: ")
@@ -118,7 +115,7 @@ def start_client():
                         "group_id": gid,
                         "user_id": user_to_add
                     })
-                    ssock.sendall(json.dumps(msg).encode())
+                    ssock.sendall(msg)
 
                 elif choice == "4":
                     gid = input("Group ID to send to: ")
@@ -133,29 +130,25 @@ def start_client():
                         "timestamp": datetime.utcnow().isoformat() + "Z"
                     }
                     encrypted = encrypt_message(message)
-                    ssock.sendall(json.dumps(encrypted).encode())
+                    ssock.sendall(encrypted)
 
-# Message Encryption before sending to server
+# Encrypt message (returns raw binary: iv + ciphertext)
 def encrypt_message(message_dict):
     global aes_key
     aesgcm = AESGCM(aes_key)
     iv = os.urandom(12)
-    plaintext = json.dumps(message_dict).encode()
+    plaintext = json.dumps(message_dict).encode('utf-8')
     ciphertext = aesgcm.encrypt(iv, plaintext, None)
-    return {
-        "type": "secure",
-        "ciphertext": base64.b64encode(ciphertext).decode(),
-        "iv": base64.b64encode(iv).decode()
-    }
-    
-# Decrypt incoming message
-def decrypt_message(encrypted_msg):
+    return iv + ciphertext  # return raw binary
+
+# Decrypt incoming binary message
+def decrypt_message(data):
     global aes_key
     aesgcm = AESGCM(aes_key)
-    iv = base64.b64decode(encrypted_msg["iv"])
-    ciphertext = base64.b64decode(encrypted_msg["ciphertext"])
+    iv = data[:12]
+    ciphertext = data[12:]
     plaintext = aesgcm.decrypt(iv, ciphertext, None)
-    return json.loads(plaintext.decode())
+    return json.loads(plaintext.decode('utf-8'))
 
 if __name__ == "__main__":
     start_client()

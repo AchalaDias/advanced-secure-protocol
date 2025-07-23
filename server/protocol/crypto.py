@@ -32,20 +32,17 @@ def decrypt_aes_key(encrypted_key, private_key):
     )
 
 # AESGCM encrypt/decrypt (session key passed externally)
-def encrypt_message(full_message: dict, aes_key: bytes) -> dict:
+def encrypt_message(full_message: dict, aes_key: bytes) -> bytes:
     aesgcm = AESGCM(aes_key)
     iv = os.urandom(12)
-    plaintext = json.dumps(full_message).encode()
+    plaintext = json.dumps(full_message).encode('utf-8')
     ciphertext = aesgcm.encrypt(iv, plaintext, None)
-    return {
-        "type": "secure",
-        "ciphertext": base64.b64encode(ciphertext).decode(),
-        "iv": base64.b64encode(iv).decode()
-    }
+    return iv + ciphertext  # concatenate nonce and ciphertext
+
 # AESGCM decrypt (session key passed externally)
-def decrypt_message(encrypted_msg: dict, aes_key: bytes) -> dict:
+def decrypt_message(encrypted_data: bytes, aes_key: bytes) -> dict:
     aesgcm = AESGCM(aes_key)
-    iv = base64.b64decode(encrypted_msg["iv"])
-    ciphertext = base64.b64decode(encrypted_msg["ciphertext"])
+    iv = encrypted_data[:12]
+    ciphertext = encrypted_data[12:]
     plaintext = aesgcm.decrypt(iv, ciphertext, None)
-    return json.loads(plaintext.decode())
+    return json.loads(plaintext.decode('utf-8'))

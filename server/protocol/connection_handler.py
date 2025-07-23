@@ -48,18 +48,17 @@ def handle_client_connection(connstream, addr):
         if key_msg["type"] != "aes_key":
             raise ValueError("Expected AES key payload")
 
-        encrypted_key = base64.b64decode(key_msg["key"])
+        encrypted_key = base64.b64decode(key_msg["key"])  # client uses base64
         aes_key = decrypt_aes_key(encrypted_key, private_key)
     except Exception as e:
         logger.error(f"Failed to receive AES key: {e}")
         return
-
     try:
-        # Read incoming data stream
-        data = connstream.recv(2048).decode()
+        # Step 3: Receive authentication message (as raw binary)
+        data = connstream.recv(4096)
         if not data:
             return
-        # Extract Json data from incoming message
+
         msg = extract_incoming_message(data, connstream, aes_key)     
     
         # User Authentication
@@ -68,15 +67,14 @@ def handle_client_connection(connstream, addr):
             register_session(user_uuid, username, connstream, aes_key)
             logger.info(f"User {username} ({user_uuid}) is online")
             
-        connstream.sendall(json.dumps(response_data).encode())
+        connstream.sendall(encrypt_message(response_data, aes_key))
         
         user_uuid, session = get_session_by_socket(connstream)
-        # Inform other users or peer servers about the new user
         broadcast_online_users(user_uuid, session)
 
-        # Loop for messages or commands
+        # Step 4: Main communication loop
         while True:
-            data = connstream.recv(4 * 1024).decode()
+            data = connstream.recv(4096)
             if not data:
                 break
             
@@ -84,64 +82,57 @@ def handle_client_connection(connstream, addr):
                 
             try:
                 # Validate session
-                
                 if not session:
                     logger.warning(f"Unauthorized connection {user_uuid}")
-                    connstream.sendall(json.dumps({
+                    error_msg = {
                         "type": "error",
                         "message": "Unauthorized connection"
-                    }).encode())
+                    }
+                    connstream.sendall(encrypt_message(error_msg, aes_key))
                     break
                 
-                # ====================== User to User Messaging =====================
-                # Passing message between users (Private messages)
+                # =================== Message Handling ===================
                 if msg.get("type") == "message" and msg.get("to_type") == "user":
                     user_to_user_message(msg, connstream, user_uuid, session)
                 
-                #  Broadcast Message to Group Members 
                 elif msg.get("type") == "message" and msg.get("to_type") == "group":
                     user_to_group_message(msg, user_uuid, session)
                 
-                # Fetch online users list
                 elif msg.get("type") == "get_online_users":
-                    get_online_users(user_uuid, session, connstream)
-                # ====================================================================
+                    get_online_users(user_uuid, session, connstream, aes_key)
 
-                # ======================= Group Messaging ============================     
-                # Create message groups
                 elif msg.get("type") == "create_group":
                     create_new_group(msg, user_uuid, connstream, aes_key)
                     
-                # List all users groups 
                 elif msg.get("type") == "list_my_groups":
                     groups = get_groups_by_user(user_uuid)
                     response = {
                         "type": "list_my_groups",
                         "groups": groups
                     }
-                    connstream.sendall(json.dumps(encrypt_message(response, aes_key)).encode())    
+                    connstream.sendall(encrypt_message(response, aes_key))    
                        
-                # Adding user to group 
                 elif msg.get("type") == "add_user_to_group":
                     add_user_to_message_group(msg, connstream, aes_key)        
-                # ===========================================================================
 
-                # ======================== File Transfering =================================           
                 elif msg.get("type") in ["message_file", "group_file"]:
                     send_files(msg, user_uuid, session, connstream, aes_key)
-                # ===========================================================================      
+                # ========================================================
+                
                 else:
                     logger.error(f"Unknown message type")
-                    connstream.sendall(json.dumps({
+                    error_msg = {
                         "type": "error",
                         "message": "Unknown message type"
-                    }).encode())
+                    }
+                    connstream.sendall(encrypt_message(error_msg, aes_key))
             except Exception as msg_err:
                 logger.error(f"Failed to process message: {msg_err}")
-                connstream.sendall(json.dumps({
+                error_msg = {
                     "type": "error",
                     "message": "Failed to parse message"
-                }).encode())
+                }
+                connstream.sendall(encrypt_message(error_msg, aes_key))
 
     except Exception as e:
         logger.error(f"Exception with {addr}: {e}")
