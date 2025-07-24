@@ -33,6 +33,7 @@ advanced-secure-protocol/
 ├── clients/                  # Example test clients
 │
 ├── docker-compose.yml       # Docker Compose configuration
+├── docker-compose.mysql.yml # Docker Compose file for local mysql db
 └── README.md
 ```
 

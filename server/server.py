@@ -8,7 +8,7 @@ from protocol.connection_handler import handle_client_connection
 from protocol.server_link import initiate_server_connections
 
 logger = get_logger()
-HOST = os.getenv("SERVER_HOST", "127.0.0.1")
+HOST = os.getenv("SERVER_HOST", "0.0.0.0")
 PORT = int(os.getenv("SERVER_PORT", 5001))
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
