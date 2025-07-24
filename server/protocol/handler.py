@@ -142,7 +142,7 @@ def user_to_user_message(msg, connstream, user_uuid, session):
         forward_msg = {
             "type": "message",
             "from_id": user_uuid,
-            "from_name": session["username"],
+            "from": session["username"],
             "to": target_uuid,
             "to_type": "user",
             "to_name": remote_name,
@@ -163,47 +163,65 @@ def user_to_user_message(msg, connstream, user_uuid, session):
     }, session["aes_key"]))  
         
 def user_to_group_message(msg, user_uuid, session):
-    """
-    Sends a message from a user to all members of a group.
-
-    Args:
-        msg (dict): The message payload.
-        user_uuid (str): UUID of the sender.
-        session (dict): Sender's session info.
-
-    Behavior:
-        - Adds sender's username to the message.
-        - Retrieves group members using the group_id.
-        - Encrypts the message with each recipient's AES key.
-        - Sends the encrypted message to each online group member.
-    """
     group_id = msg.get("to")
-    msg["from"] =  session["username"]
-    # Lookup group members
+    group_name = get_group_name_by_id(group_id)
+    msg["from"] = session["username"]
+
     members = get_group_members(group_id)
-    
+
     for member_uuid in members:
         if member_uuid == user_uuid:
             continue  # Skip sender
-        
+
+        # === Case 1: Local user
         recipient_session = get_session(member_uuid)
         if recipient_session:
-            group_name = get_group_name_by_id(group_id)
             message = {
                 "type": "group_message",
                 "from": session["username"],
                 "to": group_name,
-                "to_type": "group",  
-                "payload": msg['payload'], 
-                "payload_type": "text", 
+                "to_type": "group",
+                "payload": msg['payload'],
+                "payload_type": "text",
                 "timestamp": datetime.utcnow().isoformat() + "Z"
             }
             encrypted = encrypt_message(message, recipient_session["aes_key"])
             try:
                 recipient_session["conn"].sendall(encrypted)
-                logger.info(f"Broadcasting message user: {message['from']} -> group ID({group_id})")
+                logger.info(f"[GROUP] Sent to local user: {member_uuid} in group {group_id}")
             except Exception as e:
-                logger.error(f"Error sending to {member_uuid}: {e}")               
+                logger.error(f"[GROUP] Error sending to {member_uuid}: {e}")
+            continue
+
+        # === Case 2: Remote user
+        server_info = get_server_for_user(member_uuid)
+        if server_info:
+            server_id = server_info["server_id"]
+            remote_name = server_info["name"]
+            server_session = get_server_session(server_id)
+
+            if server_session:
+                try:
+                    forward_msg = {
+                        "type": "message",
+                        "from_id": user_uuid,
+                        "from": session["username"],
+                        "to": member_uuid,
+                        "to_type": "user",
+                        "message_type": "group",
+                        "group_id": group_id,
+                        "to_group_name": group_name,
+                        "to_name": remote_name,
+                        "payload": msg["payload"],
+                        "payload_type": "text",
+                        "timestamp": datetime.utcnow().isoformat() + "Z"
+                    }
+                    server_session["conn"].sendall(encrypt_message(forward_msg, server_session["aes_key"]))
+                    logger.info(f"[GROUP] Forwarded to server {server_id} for user {member_uuid}")
+                except Exception as e:
+                    logger.error(f"[GROUP] Failed to forward to server {server_id}: {e}")
+            else:
+                logger.warning(f"[GROUP] Server {server_id} not connected (for user {member_uuid})")              
                      
 def get_online_users(user_uuid, session, connstream, aes_key):
     """

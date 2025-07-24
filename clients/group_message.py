@@ -121,7 +121,7 @@ def start_client():
                     gid = input("Group ID to send to: ")
                     text = input("Message: ")
                     message = {
-                        "type": "message",
+                        "type": "group_message",
                         "from": my_uuid,
                         "to": gid,
                         "to_type": "group",

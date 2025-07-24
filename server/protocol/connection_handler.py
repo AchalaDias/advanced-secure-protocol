@@ -95,7 +95,7 @@ def handle_client_connection(connstream, addr):
                 if msg.get("type") == "message" and msg.get("to_type") == "user":
                     user_to_user_message(msg, connstream, user_uuid, session)
                 
-                elif msg.get("type") == "message" and msg.get("to_type") == "group":
+                elif msg.get("type") == "group_message" and msg.get("to_type") == "group":
                     user_to_group_message(msg, user_uuid, session)
                 
                 elif msg.get("type") == "online_user_request":
