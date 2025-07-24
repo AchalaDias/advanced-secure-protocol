@@ -7,19 +7,30 @@ This is a secure chat server built using Python and TLS-encrypted sockets. It su
 
 ## 🚀 Features
 
-🔒 TLS-encrypted TCP communication for secure client-server and server-server channels
-🔐 RSA-based session key exchange followed by AES-GCM for message confidentiality and integrity
-👤 User registration and login with hashed passwords (bcrypt)
-💡 Session management and virtual IP assignment for user tracking and presence
-💬 Real-time messaging between individual users and user groups
-🌐 Online user discovery across all connected servers
-👥 Group messaging with dynamic group creation, listing, and membership management
-📂 Secure file transfer (AES-GCM encrypted) with extension whitelisting and size limit (≤ 5MB)
-🛰️ Server-to-server communication with secure handshake (auto/manual), authentication, and remote user mapping
-🔁 Inter-server message forwarding for users and groups, allowing cross-network communication
-🧾 MySQL-based persistent backend for users, groups, and registered peer servers
-📄 Structured logging to both console and server.log for debugging and auditability
-🧪 Designed for secure protocol testing and ethical exploitation in a virtualized classroom environment
+-   🔒  **TLS-encrypted TCP communication**  for secure client-server and server-server channels
+    
+-   🔐  **RSA-based session key exchange**  followed by AES-GCM for message confidentiality and integrity
+    
+-   👤  **User registration and login**  with hashed passwords (`bcrypt`)
+    
+-   💡  **Session management and virtual IP assignment**  for user tracking and presence
+    
+-   💬  **Real-time messaging**  between individual users and user groups
+    
+-   🌐  **Online user discovery**  across all connected servers
+    
+-   👥  **Group messaging**  with dynamic group creation, listing, and membership management
+    
+-   📂  **Secure file transfer**  (AES-GCM encrypted) with extension whitelisting and size limit (≤ 5MB)
+    
+-   🛰️  **Server-to-server communication**  with secure handshake (auto/manual), authentication, and remote user mapping
+    
+-   🔁  **Inter-server message forwarding**  for users and groups, allowing cross-network communication
+    
+-   🧾  **MySQL-based persistent backend**  for users, groups, and registered peer servers
+    
+-   📄  **Structured logging**  to both console and  `server.log`  for debugging and auditability
+      
 
 ---
 
