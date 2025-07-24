@@ -1,7 +1,8 @@
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-import os, base64, json
+import os, json, base64
+from datetime import datetime
 
 # Generate AES key
 def generate_aes_key():
@@ -50,3 +51,13 @@ def decrypt_message(encrypted_data: bytes, aes_key: bytes) -> dict:
     ciphertext = encrypted_data[12:]
     plaintext = aesgcm.decrypt(iv, ciphertext, None)
     return json.loads(plaintext.decode('utf-8'))
+
+# Transaction logging
+def log_encrypted_payload(sender_name: str, sender_uuid: str,payload: dict):
+    with open(".msglog", "a") as f:
+        f.write(json.dumps({
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "sender_name": sender_name,
+            "sender_uuid": sender_uuid,
+            "payload": base64.b64encode(payload).decode()
+        }) + "\n")

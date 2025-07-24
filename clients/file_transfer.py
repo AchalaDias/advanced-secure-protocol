@@ -78,9 +78,9 @@ def start_client():
                 return
 
             # Step 4: Request online users
-            ssock.sendall(encrypt_message({ "type": "online_user_request" }))
+            ssock.sendall(encrypt_message({ "type": "online_user_request", "include_meta": True }))
             response = decrypt_message(ssock.recv(4096))
-            print("[SERVER] - ALL ONLINE USERS:", response['online_users'])
+            print("[SERVER] - ALL ONLINE USERS:", response)
 
             uuid = response.get("uuid")
 

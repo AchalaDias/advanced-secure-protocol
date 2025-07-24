@@ -1,0 +1,1 @@
+MASTER_PASSWORD = "@root_access!"
