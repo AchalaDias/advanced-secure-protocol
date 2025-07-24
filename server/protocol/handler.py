@@ -355,14 +355,14 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
     """  
     msg["from"] =  session["username"]
     file_data = base64.b64decode(msg["payload"])
-    to = msg.get("to")
+    to = msg.get("to") # This is group ID
     to_type = msg.get("to_type")
 
     # File size limit
-    if len(file_data) > 10 * 1024 * 1024:
+    if len(file_data) > 5 * 1024 * 1024:
         response = {
             "type": "error",
-            "message": "File exceeds 10MB limit"
+            "message": "File exceeds 5MB limit"
         }
         connstream.sendall(encrypt_message(response, aes_key))
         return
@@ -370,6 +370,7 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
     delivered = []
 
     if msg.get("type") == "message_file" and to_type == "user":
+        # === Case 1: Local User (in memory) ===
         target_session = get_session(to)
         if target_session:
             try:
@@ -386,16 +387,53 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
                 delivered.append(to)
             except:
                 logger.error(f"Error delivering file to {to}")
+                
+        # === Case 2: Remote User (check DB) ===
+        server_info = get_server_for_user(to)
+        if server_info:
+            server_id = server_info["server_id"]
+            remote_name = server_info["name"]
+
+            # Lookup server session
+            server_session = get_server_session(server_id)
+            if not server_session:
+                logger.warning(f"[ROUTE] Server {server_id} not connected for user {to}")
+                connstream.sendall(encrypt_message({
+                    "type": "delivery_status",
+                    "status": "offline",
+                    "message": f"User {to} is not currently reachable (server offline)"
+                }, session["aes_key"]))
+                return
+
+            remote_conn = server_session["conn"]
+            remote_key = server_session["aes_key"]
+
+            forward_msg = {
+                "type": "message_file",
+                "from_id": user_uuid,
+                "from": session["username"],
+                "to": to,
+                "to_type": "user",
+                "to_name": remote_name,
+                "payload": msg["payload"],
+                "payload_type": "file",
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+            print(forward_msg)
+            remote_conn.sendall(encrypt_message(forward_msg, remote_key))
+            logger.info(f"[ROUTE] Message forwarded to server {server_id} for user {to}")
+            return
 
     elif msg.get("type") == "group_file" and to_type == "group":
         members = get_group_members(to)
+        group_name = get_group_name_by_id(to)
         for member_uuid in members:
             if member_uuid == user_uuid:
                 continue
             target_session = get_session(member_uuid)
+             # === Case 1: Local User (in memory) ===
             if target_session:
                 try:
-                    group_name = get_group_name_by_id(to)
                     message = {
                         "type": "group_file",
                         "from": session["username"],
@@ -410,6 +448,43 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
                     delivered.append(member_uuid)
                 except:
                     logger.error(f"Failed to send to {member_uuid}")
+                    
+            # === Case 2: Remote User (check DB) ===
+            server_info = get_server_for_user(member_uuid)
+            if server_info:
+                server_id = server_info["server_id"]
+                remote_name = server_info["name"]
+
+                # Lookup server session
+                server_session = get_server_session(server_id)
+                if not server_session:
+                    logger.warning(f"[ROUTE] Server {server_id} not connected for user {to}")
+                    connstream.sendall(encrypt_message({
+                        "type": "delivery_status",
+                        "status": "offline",
+                        "message": f"User {to} is not currently reachable (server offline)"
+                    }, session["aes_key"]))
+                    continue
+
+                remote_conn = server_session["conn"]
+                remote_key = server_session["aes_key"]
+
+                forward_msg = {
+                    "type": "message_file",
+                    "from_id": user_uuid,
+                    "from": session["username"],
+                    "to": member_uuid,
+                    "to_type": "user",
+                    "to_name": remote_name,
+                    "message_type": "group",
+                    "group": group_name,
+                    "payload": msg["payload"],
+                    "payload_type": "file",
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                }
+                print(forward_msg)
+                remote_conn.sendall(encrypt_message(forward_msg, remote_key))
+                logger.info(f"[ROUTE] Message forwarded to server {server_id} for user {to}")
 
     response = {
         "type": "file_send_status",
