@@ -7,31 +7,21 @@ This is a secure chat server built using Python and TLS-encrypted sockets. It su
 
 ## 🚀 Features
 
-- TLS-encrypted TCP communication
-
-- Secure AES-GCM encrypted payloads
-
-- RSA-based key exchange
-
-- User registration and login
-
-- Session management and user presence
-
-- Real-time messaging (individual and group)
-
-- Secure file transfer with size limit (≤10MB)
-
-- Group creation, listing, membership, and broadcasting
-
-- Online user discovery
-
-- Logging to file and console
-
-  
+🔒 TLS-encrypted TCP communication for secure client-server and server-server channels
+🔐 RSA-based session key exchange followed by AES-GCM for message confidentiality and integrity
+👤 User registration and login with hashed passwords (bcrypt)
+💡 Session management and virtual IP assignment for user tracking and presence
+💬 Real-time messaging between individual users and user groups
+🌐 Online user discovery across all connected servers
+👥 Group messaging with dynamic group creation, listing, and membership management
+📂 Secure file transfer (AES-GCM encrypted) with extension whitelisting and size limit (≤ 5MB)
+🛰️ Server-to-server communication with secure handshake (auto/manual), authentication, and remote user mapping
+🔁 Inter-server message forwarding for users and groups, allowing cross-network communication
+🧾 MySQL-based persistent backend for users, groups, and registered peer servers
+📄 Structured logging to both console and server.log for debugging and auditability
+🧪 Designed for secure protocol testing and ethical exploitation in a virtualized classroom environment
 
 ---
-
-  
 
 # Project Structure
 
