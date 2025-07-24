@@ -9,6 +9,7 @@ MAX_CLIENTS = 65533  # 10.8.0.2 to 10.8.255.254
 assigned_ips = {}     # uuid -> IP
 ip_pool = set()       # All assigned IPs
 active_sessions = {}  # uuid -> session info
+active_server_sessions = {}  # server_id -> session
 
 def assign_ip(user_uuid):
     """Assign a virtual IP address from the pool to a user."""
@@ -69,3 +70,20 @@ def get_session_by_socket(sock):
         if session["conn"] == sock:
             return uuid, session
     return None, None
+
+def register_server_session(server_id, name, conn, aes_key):
+    active_server_sessions[server_id] = {
+        "conn": conn,
+        "name": name,
+        "aes_key": aes_key,
+        "connected_at": time.time()
+    }
+
+def remove_server_session(server_id):
+    active_server_sessions.pop(server_id, None)
+
+def get_server_session(server_id):
+    return active_server_sessions.get(server_id)
+
+def get_all_server_sessions():
+    return active_server_sessions.copy()

@@ -78,7 +78,7 @@ def start_client():
                 return
             
             # Step 4: Request online users
-            encrypted = encrypt_message({ "type": "get_online_users" })
+            encrypted = encrypt_message({ "type": "online_user_request" })
             ssock.sendall(encrypted)
             response = decrypt_message(ssock.recv(4096))
             print("[SERVER] - ALL ONLINE USERS:", response['online_users'])

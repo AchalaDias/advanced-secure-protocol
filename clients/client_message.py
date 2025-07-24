@@ -98,7 +98,7 @@ def start_client():
             choice = input("Register or Login? (r/l): ").lower()
             username = input("Username: ")
             password = input("Password: ")
-            msg_type = "REGISTER" if choice == 'r' else "LOGIN"
+            msg_type = "REGISTER" if choice.lower() == 'r' else "LOGIN"
 
             auth_msg = {
                 "type": msg_type,
@@ -116,7 +116,7 @@ def start_client():
             my_name = response.get("username")
 
             # Step 4: Request online users
-            ssock.sendall(encrypt_message({ "type": "get_online_users" }))
+            ssock.sendall(encrypt_message({ "type": "online_user_request" }))
             response = decrypt_message(ssock.recv(4096))
             print("[SERVER] - ALL ONLINE USERS:", response['online_users'])
 

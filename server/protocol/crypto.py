@@ -3,6 +3,10 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 import os, base64, json
 
+# Generate AES key
+def generate_aes_key():
+    return AESGCM.generate_key(bit_length=256)
+
 # Generate RSA key pair
 def generate_rsa_key_pair():
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)

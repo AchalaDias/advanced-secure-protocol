@@ -189,7 +189,7 @@ def get_online_users(user_uuid, session, connstream, aes_key):
         if uid == user_uuid:
             continue
         online_users.append({
-            "uuid": uid,
+            "user_id": uid,
             "name": session["username"],
             "ip": session["ip"]
         })

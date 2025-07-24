@@ -5,6 +5,7 @@ import os
 from db.db_init import init_db
 from protocol.logger import get_logger
 from protocol.connection_handler import handle_client_connection
+from protocol.server_link import initiate_server_connections
 
 logger = get_logger()
 HOST = os.getenv("SERVER_HOST", "127.0.0.1")
@@ -39,4 +40,5 @@ def start_server():
 
 if __name__ == "__main__":
     init_db()
+    initiate_server_connections()  # Step 2: Start server-to-server sessions
     start_server()
