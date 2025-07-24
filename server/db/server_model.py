@@ -38,3 +38,35 @@ def save_server_users(server_id, users):
 
     conn.commit()
     conn.close()
+    
+def get_all_remote_users():
+    """
+    Retrieves all online users from connected servers.
+
+    Returns:
+        List of dicts: { server_id, user_id, name }
+    """
+    conn = get_db_conn()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT server_id, user_id, name FROM server_users")
+    users = cursor.fetchall()
+    conn.close()
+    return users
+
+
+def get_server_for_user(user_id):
+    """
+    Finds which server a user belongs to based on user_id.
+
+    Returns:
+        dict: {server_id, name} or None if not found.
+    """
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT server_id, name FROM server_users WHERE user_id = %s LIMIT 1",
+        (user_id,)
+    )
+    result = cursor.fetchone()
+    conn.close()
+    return result

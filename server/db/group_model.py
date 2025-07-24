@@ -1,6 +1,10 @@
 import mysql.connector
 from db.db_config import DB_CONFIG
 
+def get_db_conn():
+    """ Initializing the db connection """
+    return mysql.connector.connect(**DB_CONFIG)
+
 def create_group(group_name):
     """
     Creates a new group in the database.
@@ -11,7 +15,7 @@ def create_group(group_name):
     Returns:
         int: The ID of the newly created group.
     """
-    conn = mysql.connector.connect(**DB_CONFIG)
+    conn = get_db_conn()
     cur = conn.cursor()
     cur.execute("INSERT INTO `groups` (group_name) VALUES (%s)", (group_name,))
     group_id = cur.lastrowid
@@ -28,7 +32,7 @@ def add_user_to_group(group_id, user_uuid):
         group_id (int): The ID of the group.
         user_uuid (str): The UUID of the user to add.
     """
-    conn = mysql.connector.connect(**DB_CONFIG)
+    conn = get_db_conn()
     cur = conn.cursor()
     cur.execute("INSERT IGNORE INTO group_members (group_id, user_uuid) VALUES (%s, %s)", (group_id, user_uuid))
     conn.commit()
@@ -45,7 +49,7 @@ def get_group_members(group_id):
     Returns:
         list: A list of user UUIDs who are members of the group.
     """
-    conn = mysql.connector.connect(**DB_CONFIG)
+    conn = get_db_conn()
     cur = conn.cursor()
     cur.execute("SELECT user_uuid FROM group_members WHERE group_id = %s", (group_id,))
     members = [row[0] for row in cur.fetchall()]
@@ -63,7 +67,7 @@ def get_groups_by_user(user_uuid):
     Returns:
         list: A list of dictionaries, each containing 'group_id' and 'group_name'.
     """
-    conn = mysql.connector.connect(**DB_CONFIG)
+    conn = get_db_conn()
     cur = conn.cursor()
     cur.execute("""
         SELECT g.group_id, g.group_name
@@ -86,7 +90,7 @@ def get_group_name_by_id(group_id):
     Returns:
         str or None: The name of the group, or None if not found.
     """
-    conn = mysql.connector.connect(**DB_CONFIG)
+    conn = get_db_conn()
     cur = conn.cursor()
     cur.execute("SELECT group_name FROM `groups` WHERE group_id = %s", (group_id,))
     result = cur.fetchone()

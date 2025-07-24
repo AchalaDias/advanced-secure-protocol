@@ -78,7 +78,6 @@ def init_db():
         )
     """)
 
-
     conn.commit()
     conn.close()
     logger.info("[DB INIT] Database initialized.")

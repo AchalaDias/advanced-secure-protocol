@@ -136,7 +136,8 @@ def listen_to_server(server, conn, aes_key):
                 logger.warning(f"[SERVER MESSAGE] No servers avaible to connect")
                 break
             # TODO: Decrypt, parse, and handle inter-server messages
-            logger.info(f"[SERVER MESSAGE] Received from {server['name']}: {data}")
+            response = decrypt_message(data, aes_key)
+            logger.info(f"[SERVER MESSAGE] Received from {server['name']}: {response}")
     except Exception as e:
         logger.warning(f"[SERVER LINK] Lost connection to {server['name']}: {e}")
     finally:

@@ -2,9 +2,10 @@ import json, base64, re
 from datetime import datetime
 from protocol.logger import get_logger
 from db.user_model import register_user, authenticate_user, user_exists
+from db.server_model import get_all_remote_users, get_server_for_user
 from protocol.crypto import decrypt_message, encrypt_message
 from db.group_model import get_group_members, add_user_to_group, create_group, get_group_name_by_id
-from protocol.session_manager import get_session, get_all_sessions
+from protocol.session_manager import get_session, get_all_sessions, get_server_session
 
 logger = get_logger()
 
@@ -94,38 +95,72 @@ def user_to_user_message(msg, connstream, user_uuid, session):
         - Notifies sender if the target is offline or invalid.
     """
     target_uuid = msg.get("to")
+    
+    
+    
+    # === Case 1: Local User (in memory) ===
     target_session = get_session(target_uuid)
-    target_aes_key = target_session["aes_key"]
-                    
-    # Avoid sending messaged to same session
-    if user_uuid == target_uuid:
-        return
-
     if target_session:
         target_conn = target_session["conn"]
-        msg['from'] = session["username"]
-        message_to = f"{msg['to']} - {target_session['username']}"
-        
+        target_aes_key = target_session["aes_key"]
+
         message = {
             "type": "message",
             "from": session["username"],
-            "to": target_session['username'],
+            "to": target_session["username"],
             "from_id": user_uuid,
-            "to_type": "user",  
-            "payload": msg['payload'], 
-            "payload_type": "text", 
+            "to_type": "user",
+            "payload": msg["payload"],
+            "payload_type": "text",
             "timestamp": datetime.utcnow().isoformat() + "Z"
         }
-        forward_msg = encrypt_message(message, target_aes_key) 
-        target_conn.sendall(forward_msg)
-        logger.info(f"[ROUTE] Message from {msg['from']} to {message_to} routed")
-    else:
-        error_msg = {
-            "type": "delivery_status",
-            "status": "offline",
-            "message": f"User {target_uuid} is offline or Invalid"
-        }        
-        connstream.sendall(encrypt_message(error_msg, target_aes_key))
+
+        target_conn.sendall(encrypt_message(message, target_aes_key))
+        logger.info(f"[ROUTE] Message from {session['username']} to {target_session['username']} (local)")
+        return
+        
+    # === Case 2: Remote User (check DB) ===
+    server_info = get_server_for_user(target_uuid)
+    if server_info:
+        server_id = server_info["server_id"]
+        remote_name = server_info["name"]
+
+        # Lookup server session
+        server_session = get_server_session(server_id)
+        if not server_session:
+            logger.warning(f"[ROUTE] Server {server_id} not connected for user {target_uuid}")
+            connstream.sendall(encrypt_message({
+                "type": "delivery_status",
+                "status": "offline",
+                "message": f"User {target_uuid} is not currently reachable (server offline)"
+            }, session["aes_key"]))
+            return
+
+        remote_conn = server_session["conn"]
+        remote_key = server_session["aes_key"]
+
+        forward_msg = {
+            "type": "message",
+            "from_id": user_uuid,
+            "from_name": session["username"],
+            "to": target_uuid,
+            "to_type": "user",
+            "to_name": remote_name,
+            "payload": msg["payload"],
+            "payload_type": "text",
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        print(forward_msg)
+        remote_conn.sendall(encrypt_message(forward_msg, remote_key))
+        logger.info(f"[ROUTE] Message forwarded to server {server_id} for user {target_uuid}")
+        return
+
+    # === Case 3: Unknown target ===
+    connstream.sendall(encrypt_message({
+        "type": "delivery_status",
+        "status": "offline",
+        "message": f"User {target_uuid} not found"
+    }, session["aes_key"]))  
         
 def user_to_group_message(msg, user_uuid, session):
     """
@@ -183,7 +218,8 @@ def get_online_users(user_uuid, session, connstream, aes_key):
         - Retrieves all active sessions.
         - Excludes the requester from the list.
         - Sends back a response with UUID, username, and IP of each online user.
-    """                          
+    """  
+    # Local user sessions                        
     online_users = []
     for uid, session in get_all_sessions().items():
         if uid == user_uuid:
@@ -192,6 +228,15 @@ def get_online_users(user_uuid, session, connstream, aes_key):
             "user_id": uid,
             "name": session["username"],
             "ip": session["ip"]
+        })
+        
+    # Remote server users
+    remote_users = get_all_remote_users()
+    for user in remote_users:
+        online_users.append({
+            "user_id": user["user_id"],
+            "name": user["name"],
+            "server_id": user["server_id"]
         })
     response = {
         "type": "online_user_response",
