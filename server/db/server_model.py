@@ -1,5 +1,4 @@
 import mysql.connector
-import uuid
 from .db_config import DB_CONFIG
 
 def get_db_conn():
@@ -7,6 +6,13 @@ def get_db_conn():
     return mysql.connector.connect(**DB_CONFIG)
 
 def fetch_all_servers():
+    """
+    Fetches all registered servers from the 'servers' table.
+
+    Returns:
+        list of dict: Each dictionary contains server metadata,
+                      including hostname, port, handshake type, credentials, etc.
+    """
     conn = get_db_conn()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT * FROM servers")

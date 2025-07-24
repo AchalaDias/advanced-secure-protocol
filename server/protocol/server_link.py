@@ -1,7 +1,7 @@
 import socket
 import ssl
 import json
-import base64, os
+import base64
 import threading
 from protocol.crypto import encrypt_message, decrypt_message
 from protocol.session_manager import register_server_session
@@ -124,22 +124,20 @@ def connect_to_servers(server):
 
 
 def initiate_server_connections():
+    """Connect to all servers listed in the database"""
     servers = fetch_all_servers()
     for server in servers:
         connect_to_servers(server)
 
 def listen_to_server(server, conn, aes_key):
+    """Continuously listen for and handle incoming messages from a connected server"""
     try:
         while True:
             data = conn.recv(4096)
             if not data:
                 logger.warning(f"[SERVER MESSAGE] No servers avaible to connect")
                 break
-            # TODO: Decrypt, parse, and handle inter-server messages
             response = decrypt_message(data, aes_key)
             logger.info(f"[SERVER MESSAGE] Received from {server['name']}: {response}")
     except Exception as e:
         logger.warning(f"[SERVER LINK] Lost connection to {server['name']}: {e}")
-    finally:
-        # TODO: clean up server session
-        pass

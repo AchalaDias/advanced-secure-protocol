@@ -72,6 +72,7 @@ def get_session_by_socket(sock):
     return None, None
 
 def register_server_session(server_id, name, conn, aes_key):
+    """Register a new active session for the given server ID"""
     active_server_sessions[server_id] = {
         "conn": conn,
         "name": name,
@@ -80,10 +81,13 @@ def register_server_session(server_id, name, conn, aes_key):
     }
 
 def remove_server_session(server_id):
+    """Remove the session for the specified server ID"""
     active_server_sessions.pop(server_id, None)
 
 def get_server_session(server_id):
+    """Get the active session associated with the given server ID"""
     return active_server_sessions.get(server_id)
 
 def get_all_server_sessions():
+    """Return a copy of all currently active server sessions"""
     return active_server_sessions.copy()
