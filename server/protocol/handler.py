@@ -1,4 +1,4 @@
-import json, base64, re
+import base64, re, os
 from datetime import datetime
 from protocol.logger import get_logger
 from db.user_model import register_user, authenticate_user, user_exists
@@ -353,8 +353,10 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
         - Forwards the file to the target user or each online group member.
         - Tracks successful deliveries and returns a status response to the sender.
     """  
+    ALLOWED_EXTENSIONS = {".txt", ".pdf", ".docx", ".xlsx", ".png", ".jpg", ".jpeg", ".gif", ".csv"}
     msg["from"] =  session["username"]
     file_data = base64.b64decode(msg["payload"])
+    filename = msg.get("filename", "")
     to = msg.get("to") # This is group ID
     to_type = msg.get("to_type")
 
@@ -363,6 +365,16 @@ def send_files(msg, user_uuid, session, connstream, aes_key):
         response = {
             "type": "error",
             "message": "File exceeds 5MB limit"
+        }
+        connstream.sendall(encrypt_message(response, aes_key))
+        return
+    
+    # === Step 2: Enforce file type restriction ===
+    _, ext = os.path.splitext(filename.lower())
+    if ext not in ALLOWED_EXTENSIONS:
+        response = {
+            "type": "error",
+            "message": f"File type '{ext}' is not allowed"
         }
         connstream.sendall(encrypt_message(response, aes_key))
         return
