@@ -369,6 +369,17 @@ Path to file: /path/to/testfile.pdf
 Same applies for group file transfer using the group ID instead of user UUID.
 
 
+### Running the Test Suite - Unit Tests
+
+To run all tests from the project root:
+```
+ python -m pytest -vv 
+
+```
+That’s it — no server or database needs to be running.
+The test suite uses stubs and mocks to simulate connections, encryption, and database calls.
+
+
 # 📁 Project Structure Overview & Implementation Details
 
 This section outlines the role of each file and directory in the `advanced-secure-protocol` project.
@@ -469,3 +480,6 @@ server/protocol/
 -   **`session_manager.py`**  – Maintains in-memory session state for all users and peer servers. Handles user IP assignment, active socket connections, AES key tracking, and presence (online/offline) management.
     
 -   **`logger.py`**  – Centralized logger used throughout the application. Logs server activity, errors, and important events into  `server.log`  for debugging and audit purposes.
+
+
+
