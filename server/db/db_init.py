@@ -1,3 +1,9 @@
+## Group Name & Members
+# - Group Name: Group Project 8
+# - Anthonan Hettige Achala Tharaka Dias (a1933508)
+# - Sanjida Amrin (a1934493)
+# - Zahin Rydha (a1938252)
+
 from .db_config import DB_CONFIG
 import mysql.connector
 from protocol.logger import get_logger

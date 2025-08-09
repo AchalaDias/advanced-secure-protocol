@@ -5,6 +5,13 @@ This is a secure chat server built using Python and TLS-encrypted sockets. It su
 
 ---
 
+## Group Name & Members
+# - Group Name: Group Project 8
+# - Anthonan Hettige Achala Tharaka Dias (a1933508)
+# - Sanjida Amrin (a1934493)
+# - Zahin Rydha (a1938252)
+
+
 ## 🚀 Features
 
 -   🔒  **TLS-encrypted TCP communication**  for secure client-server and server-server channels

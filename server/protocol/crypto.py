@@ -1,3 +1,9 @@
+## Group Name & Members
+# - Group Name: Group Project 8
+# - Anthonan Hettige Achala Tharaka Dias (a1933508)
+# - Sanjida Amrin (a1934493)
+# - Zahin Rydha (a1938252)
+
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
