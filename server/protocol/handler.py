@@ -1,6 +1,11 @@
+## Group Name & Members
+# - Group Name: Group Project 8
+# - Anthonan Hettige Achala Tharaka Dias (a1933508)
+# - Sanjida Amrin (a1934493)
+# - Zahin Rydha (a1938252)
+
 import base64, re, os
 from datetime import datetime
-
 from protocol.logger import get_logger
 from db.user_model import register_user, authenticate_user, user_exists
 from db.server_model import get_all_remote_users, get_server_for_user
